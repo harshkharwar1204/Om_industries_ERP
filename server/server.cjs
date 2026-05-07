@@ -19,7 +19,13 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🎨 Color Recipe Pro API running on port ${PORT}`);
-});
+// Only listen if not running on Vercel
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🎨 Color Recipe Pro API running on port ${PORT}`);
+  });
+}
+
+// Export for Vercel Serverless
+module.exports = app;

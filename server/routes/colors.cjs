@@ -1,43 +1,57 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db.cjs');
+const supabase = require('../db.cjs');
 
-// GET all fundamental colors
-router.get('/', (req, res) => {
+// GET all colors
+router.get('/', async (req, res) => {
   try {
-    const colors = db.prepare('SELECT * FROM fundamental_colors ORDER BY name ASC').all();
-    res.json(colors);
+    const { data, error } = await supabase
+      .from('colors')
+      .select('*')
+      .order('name', { ascending: true });
+      
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST a new fundamental color
-router.post('/', (req, res) => {
+// POST a new color
+router.post('/', async (req, res) => {
   const { name } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Color name is required' });
   }
   try {
-    const stmt = db.prepare('INSERT INTO fundamental_colors (name) VALUES (?)');
-    const result = stmt.run(name.trim().toUpperCase());
-    res.status(201).json({ id: result.lastInsertRowid, name: name.trim().toUpperCase() });
-  } catch (err) {
-    if (err.message.includes('UNIQUE')) {
-      return res.status(409).json({ error: 'Color already exists' });
+    const colorName = name.trim().toUpperCase();
+    const { data, error } = await supabase
+      .from('colors')
+      .insert([{ name: colorName }])
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') { // Postgres unique violation code
+        return res.status(409).json({ error: 'Color already exists' });
+      }
+      throw error;
     }
+    res.status(201).json(data);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// DELETE a fundamental color
-router.delete('/:id', (req, res) => {
+// DELETE a color
+router.delete('/:id', async (req, res) => {
   try {
-    const stmt = db.prepare('DELETE FROM fundamental_colors WHERE id = ?');
-    const result = stmt.run(req.params.id);
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Color not found' });
-    }
+    const { error } = await supabase
+      .from('colors')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
     res.json({ message: 'Color deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
