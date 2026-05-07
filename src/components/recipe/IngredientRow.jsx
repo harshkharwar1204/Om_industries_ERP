@@ -1,16 +1,13 @@
 export default function IngredientRow({ ingredient, colors, onChange, onRemove }) {
   return (
     <div className="ingredient-row">
-      <select
+      <input
+        list="dye-colors"
         className="ingredient-color-select"
+        placeholder="Type or select dye..."
         value={ingredient.color_name}
         onChange={(e) => onChange({ ...ingredient, color_name: e.target.value })}
-      >
-        <option value="">Select dye...</option>
-        {colors.map((c) => (
-          <option key={c.id} value={c.name}>{c.name}</option>
-        ))}
-      </select>
+      />
       <input
         className="ingredient-qty"
         type="number"

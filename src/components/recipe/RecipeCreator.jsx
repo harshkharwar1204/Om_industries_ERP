@@ -94,6 +94,12 @@ export default function RecipeCreator({ colors, onSave, editingRecipe, onCancelE
         {editingRecipe ? 'Edit Recipe' : 'Recipe Creator'}
       </div>
 
+      <datalist id="dye-colors">
+        {colors.map((c) => (
+          <option key={c.id} value={c.name} />
+        ))}
+      </datalist>
+
       <form onSubmit={handleSubmit}>
         <div className="recipe-form-grid">
           <div className="form-group">

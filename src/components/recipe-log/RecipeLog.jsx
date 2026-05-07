@@ -10,7 +10,7 @@ export default function RecipeLog({ recipes, onView, onEdit, onDelete }) {
   );
 
   return (
-    <div className="recipe-log">
+    <div className="recipe-log" id="recipe-log-section">
       <div className="card">
         <div className="log-header">
           <div className="log-title">
