@@ -26,6 +26,19 @@ export async function deleteColor(id) {
   return res.json();
 }
 
+export async function updateColor(id, newName, oldName) {
+  const res = await fetch(`${API_BASE}/colors/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: newName, oldName }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update color');
+  }
+  return res.json();
+}
+
 // ==================== RECIPES ====================
 export async function getRecipes() {
   const res = await fetch(`${API_BASE}/recipes`);

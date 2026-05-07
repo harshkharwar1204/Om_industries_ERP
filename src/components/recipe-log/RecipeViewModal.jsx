@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function RecipeViewModal({ recipe, onClose }) {
+export default function RecipeViewModal({ recipe, onClose, onEdit, onDelete }) {
   if (!recipe) return null;
 
   return (
@@ -11,7 +11,11 @@ export default function RecipeViewModal({ recipe, onClose }) {
             <h2 className="modal-title">
               Recipe #{recipe.code} <span className="title-divider">|</span> <span className="title-client">{recipe.client}</span>
             </h2>
-            <button className="print-btn no-print" onClick={() => window.print()} title="Print Recipe">🖨️ Print</button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {onEdit && <button className="print-btn no-print" onClick={onEdit} title="Edit Recipe">✏️ Edit</button>}
+              {onDelete && <button className="print-btn no-print" onClick={onDelete} title="Delete Recipe" style={{color: 'var(--accent-red)'}}>🗑️ Delete</button>}
+              <button className="print-btn no-print" onClick={() => window.print()} title="Print Recipe">🖨️ Print</button>
+            </div>
           </div>
           <button className="modal-close no-print" onClick={onClose}>✕</button>
         </div>

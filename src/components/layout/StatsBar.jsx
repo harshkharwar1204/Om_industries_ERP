@@ -13,20 +13,6 @@ export default function StatsBar({ totalRecipes, totalColors, totalClients }) {
         </div>
         <div className="stat-icon">📋</div>
       </div>
-      <div className="stat-card">
-        <div className="stat-info">
-          <div className="stat-label">Total Dyes</div>
-          <div className="stat-value">{totalColors}</div>
-        </div>
-        <div className="stat-icon">🎨</div>
-      </div>
-      <div className="stat-card">
-        <div className="stat-info">
-          <div className="stat-label">Active Clients</div>
-          <div className="stat-value">{totalClients || 'N/A'}</div>
-        </div>
-        <div className="stat-icon">👥</div>
-      </div>
     </div>
   );
 }

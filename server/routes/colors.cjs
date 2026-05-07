@@ -58,4 +58,44 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// UPDATE a color
+router.put('/:id', async (req, res) => {
+  const { name, oldName } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Color name is required' });
+  }
+  try {
+    const colorName = name.trim().toUpperCase();
+    
+    // Update the color in the colors table
+    const { data, error } = await supabase
+      .from('colors')
+      .update({ name: colorName })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ error: 'Color already exists' });
+      }
+      throw error;
+    }
+
+    // Optional: Cascade the name change to existing ingredients
+    if (oldName) {
+      const { error: ingError } = await supabase
+        .from('ingredients')
+        .update({ color_name: colorName })
+        .eq('color_name', oldName);
+      
+      if (ingError) console.error('Failed to cascade color name update to ingredients:', ingError);
+    }
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

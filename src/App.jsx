@@ -45,6 +45,16 @@ export default function App() {
     } catch (e) { showToast(e.message, 'error'); }
   };
 
+  const handleEditColor = async (id, newName, oldName) => {
+    try {
+      await api.updateColor(id, newName, oldName);
+      loadColors();
+      // Also reload recipes in case ingredients were updated
+      loadRecipes();
+      showToast(`Dye updated to "${newName.toUpperCase()}"`);
+    } catch (e) { showToast(e.message, 'error'); }
+  };
+
   const handleSaveRecipe = async (recipe) => {
     try {
       if (editingRecipe) {
@@ -64,7 +74,12 @@ export default function App() {
   };
 
   const handleEditRecipe = async (id) => {
-    try { setEditingRecipe(await api.getRecipe(id)); } catch (e) { showToast(e.message, 'error'); }
+    try { 
+      setEditingRecipe(await api.getRecipe(id)); 
+      setTimeout(() => {
+        document.getElementById('recipe-creator-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } catch (e) { showToast(e.message, 'error'); }
   };
 
   const handleDeleteRecipe = async (id) => {
@@ -82,8 +97,20 @@ export default function App() {
       <Header />
       <StatsBar totalRecipes={recipes.length} totalColors={colors.length} totalClients={uniqueClients.length} />
 
+      <RecipeLog
+        recipes={recipes}
+        onView={handleViewRecipe}
+        onEdit={handleEditRecipe}
+        onDelete={handleDeleteRecipe}
+      />
+
       <div className="main-layout">
-        <FundamentalColors colors={colors} onAdd={handleAddColor} onDelete={handleDeleteColor} />
+        <FundamentalColors 
+          colors={colors} 
+          onAdd={handleAddColor} 
+          onDelete={handleDeleteColor} 
+          onEdit={handleEditColor} 
+        />
         <RecipeCreator
           colors={colors}
           onSave={handleSaveRecipe}
@@ -92,14 +119,20 @@ export default function App() {
         />
       </div>
 
-      <RecipeLog
-        recipes={recipes}
-        onView={handleViewRecipe}
-        onEdit={handleEditRecipe}
-        onDelete={handleDeleteRecipe}
-      />
-
-      {viewRecipe && <RecipeViewModal recipe={viewRecipe} onClose={() => setViewRecipe(null)} />}
+      {viewRecipe && (
+        <RecipeViewModal 
+          recipe={viewRecipe} 
+          onClose={() => setViewRecipe(null)} 
+          onEdit={() => {
+            handleEditRecipe(viewRecipe.id);
+            setViewRecipe(null);
+          }}
+          onDelete={() => {
+            handleDeleteRecipe(viewRecipe.id);
+            setViewRecipe(null);
+          }}
+        />
+      )}
       {toast && <div className={`toast toast-${toast.type}`}>{toast.message}</div>}
     </div>
   );

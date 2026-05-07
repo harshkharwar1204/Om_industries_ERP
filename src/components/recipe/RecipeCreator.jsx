@@ -88,7 +88,7 @@ export default function RecipeCreator({ colors, onSave, editingRecipe, onCancelE
   };
 
   return (
-    <div className="card">
+    <div className="card" id="recipe-creator-section">
       <div className="card-title">
         <span className="card-title-icon">📝</span>
         {editingRecipe ? 'Edit Recipe' : 'Recipe Creator'}

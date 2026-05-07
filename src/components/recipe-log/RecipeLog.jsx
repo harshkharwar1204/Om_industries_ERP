@@ -48,8 +48,12 @@ export default function RecipeLog({ recipes, onView, onEdit, onDelete }) {
             </thead>
             <tbody>
               {filtered.map((recipe) => (
-                <tr key={recipe.id}>
-                  <td>
+                <tr 
+                  key={recipe.id} 
+                  onClick={() => onView(recipe.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td data-label="Recipe Code">
                     <div className="recipe-code-cell">
                       <div className="recipe-code-icon">📄</div>
                       <div>
@@ -58,15 +62,15 @@ export default function RecipeLog({ recipes, onView, onEdit, onDelete }) {
                       </div>
                     </div>
                   </td>
-                  <td>{recipe.client}</td>
-                  <td>{recipe.fabric || '—'}</td>
-                  <td>
+                  <td data-label="Client">{recipe.client}</td>
+                  <td data-label="Fabric">{recipe.fabric || '—'}</td>
+                  <td data-label="Shades">
                     <span className="parts-badge">
                       {recipe.shade_count} {recipe.shade_count === 1 ? 'Shade' : 'Shades'}
                     </span>
                   </td>
-                  <td>{new Date(recipe.created_at).toLocaleDateString()}</td>
-                  <td>
+                  <td data-label="Created">{new Date(recipe.created_at).toLocaleDateString()}</td>
+                  <td data-label="Actions">
                     <button className="action-btn action-view" onClick={() => onView(recipe.id)} title="View">👁️</button>
                     <button className="action-btn action-edit" onClick={() => onEdit(recipe.id)} title="Edit">✏️</button>
                     <button className="action-btn action-delete" onClick={() => onDelete(recipe.id)} title="Delete">🗑️</button>

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 
-export default function FundamentalColors({ colors, onAdd, onDelete }) {
+export default function FundamentalColors({ colors, onAdd, onDelete, onEdit }) {
   const [newColor, setNewColor] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
 
   const handleAdd = (e) => {
     e.preventDefault();
@@ -9,6 +11,18 @@ export default function FundamentalColors({ colors, onAdd, onDelete }) {
       onAdd(newColor.trim());
       setNewColor('');
     }
+  };
+
+  const startEdit = (color) => {
+    setEditingId(color.id);
+    setEditName(color.name);
+  };
+
+  const saveEdit = (color) => {
+    if (editName.trim() && editName.trim() !== color.name) {
+      onEdit(color.id, editName.trim(), color.name);
+    }
+    setEditingId(null);
   };
 
   return (
@@ -39,14 +53,44 @@ export default function FundamentalColors({ colors, onAdd, onDelete }) {
         ) : (
           colors.map((color) => (
             <div key={color.id} className="color-item">
-              <span>{color.name}</span>
-              <button
-                className="color-delete-btn"
-                onClick={() => onDelete(color.id)}
-                title="Delete color"
-              >
-                🗑️
-              </button>
+              {editingId === color.id ? (
+                <div style={{ display: 'flex', width: '100%', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    value={editName} 
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{ flex: 1, padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveEdit(color);
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                  />
+                  <button onClick={() => saveEdit(color)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'green' }}>✅</button>
+                  <button onClick={() => setEditingId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'red' }}>❌</button>
+                </div>
+              ) : (
+                <>
+                  <span>{color.name}</span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      className="color-edit-btn"
+                      onClick={() => startEdit(color)}
+                      title="Edit color"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="color-delete-btn"
+                      onClick={() => onDelete(color.id)}
+                      title="Delete color"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))
         )}
