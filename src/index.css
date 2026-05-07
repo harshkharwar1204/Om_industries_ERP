@@ -490,6 +490,12 @@ body {
   
   .log-header { flex-direction: column; align-items: flex-start; gap: 12px; }
   .log-search { width: 100%; }
+  
+  .color-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
 }
 
 /* ===== PRINT STYLES ===== */
