@@ -27,7 +27,9 @@ export default function App() {
     try { setRecipes(await api.getRecipes()); } catch (e) { console.error(e); }
   }, []);
 
-  useEffect(() => { loadColors(); loadRecipes(); }, [loadColors, loadRecipes]);
+  useEffect(() => { 
+    Promise.all([loadColors(), loadRecipes()]); 
+  }, [loadColors, loadRecipes]);
 
   const handleAddColor = async (name) => {
     try {

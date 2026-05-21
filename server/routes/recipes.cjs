@@ -75,31 +75,40 @@ router.post('/', async (req, res) => {
 
     if (recipeError) throw recipeError;
 
-    // 2. Insert Shades & Ingredients
+    // 2. Batch insert all shades at once
     if (shades && shades.length > 0) {
-      for (let i = 0; i < shades.length; i++) {
+      const shadesToInsert = shades.map((_, i) => ({
+        recipe_id: recipe.id,
+        shade_number: i + 1
+      }));
+
+      const { data: insertedShades, error: shadeError } = await supabase
+        .from('shades')
+        .insert(shadesToInsert)
+        .select();
+
+      if (shadeError) throw shadeError;
+
+      // 3. Batch insert all ingredients at once
+      const allIngredients = [];
+      insertedShades.forEach((insertedShade, i) => {
         const shade = shades[i];
-        const { data: insertedShade, error: shadeError } = await supabase
-          .from('shades')
-          .insert([{ recipe_id: recipe.id, shade_number: i + 1 }])
-          .select()
-          .single();
-
-        if (shadeError) throw shadeError;
-
         if (shade.ingredients && shade.ingredients.length > 0) {
-          const ingredientsToInsert = shade.ingredients.map(ing => ({
-            shade_id: insertedShade.id,
-            color_name: ing.color_name,
-            quantity_liters: ing.quantity_liters || 0
-          }));
-          
-          const { error: ingError } = await supabase
-            .from('ingredients')
-            .insert(ingredientsToInsert);
-
-          if (ingError) throw ingError;
+          shade.ingredients.forEach(ing => {
+            allIngredients.push({
+              shade_id: insertedShade.id,
+              color_name: ing.color_name,
+              quantity_liters: ing.quantity_liters || 0
+            });
+          });
         }
+      });
+
+      if (allIngredients.length > 0) {
+        const { error: ingError } = await supabase
+          .from('ingredients')
+          .insert(allIngredients);
+        if (ingError) throw ingError;
       }
     }
 
@@ -141,31 +150,40 @@ router.put('/:id', async (req, res) => {
       
     if (deleteError) throw deleteError;
 
-    // 3. Insert new shades & ingredients
+    // 3. Batch insert all new shades at once
     if (shades && shades.length > 0) {
-      for (let i = 0; i < shades.length; i++) {
+      const shadesToInsert = shades.map((_, i) => ({
+        recipe_id: parseInt(recipeId),
+        shade_number: i + 1
+      }));
+
+      const { data: insertedShades, error: shadeError } = await supabase
+        .from('shades')
+        .insert(shadesToInsert)
+        .select();
+
+      if (shadeError) throw shadeError;
+
+      // 4. Batch insert all ingredients at once
+      const allIngredients = [];
+      insertedShades.forEach((insertedShade, i) => {
         const shade = shades[i];
-        const { data: insertedShade, error: shadeError } = await supabase
-          .from('shades')
-          .insert([{ recipe_id: recipeId, shade_number: i + 1 }])
-          .select()
-          .single();
-
-        if (shadeError) throw shadeError;
-
         if (shade.ingredients && shade.ingredients.length > 0) {
-          const ingredientsToInsert = shade.ingredients.map(ing => ({
-            shade_id: insertedShade.id,
-            color_name: ing.color_name,
-            quantity_liters: ing.quantity_liters || 0
-          }));
-          
-          const { error: ingError } = await supabase
-            .from('ingredients')
-            .insert(ingredientsToInsert);
-
-          if (ingError) throw ingError;
+          shade.ingredients.forEach(ing => {
+            allIngredients.push({
+              shade_id: insertedShade.id,
+              color_name: ing.color_name,
+              quantity_liters: ing.quantity_liters || 0
+            });
+          });
         }
+      });
+
+      if (allIngredients.length > 0) {
+        const { error: ingError } = await supabase
+          .from('ingredients')
+          .insert(allIngredients);
+        if (ingError) throw ingError;
       }
     }
 
