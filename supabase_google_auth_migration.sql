@@ -1,13 +1,12 @@
 -- Run this in Supabase SQL Editor (Dashboard → SQL Editor)
--- Adds email and google_id fields for Google OAuth support
 
+-- 1. Add Google auth columns
 ALTER TABLE erp_users
   ADD COLUMN IF NOT EXISTS email TEXT UNIQUE,
   ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE;
 
--- After running this, update admin records with their Google email:
--- UPDATE erp_users SET email = 'your@gmail.com' WHERE phone = '8264417123';
--- UPDATE erp_users SET email = 'other@gmail.com' WHERE phone = '9574411144';
+-- 2. Make phone nullable (Google-auth admins have no phone)
+ALTER TABLE erp_users ALTER COLUMN phone DROP NOT NULL;
 
-CREATE POLICY "Allow all for erp_users email update" ON erp_users
-  FOR UPDATE USING (true) WITH CHECK (true);
+-- 3. Make pin_hash nullable (Google-auth admins have no PIN)
+ALTER TABLE erp_users ALTER COLUMN pin_hash DROP NOT NULL;

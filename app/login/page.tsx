@@ -197,7 +197,7 @@ export default function LoginPage() {
               ) : (
                 <>
                   <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.5 }}>
-                    Admin access only. Your Google account email must be linked to an admin profile.
+                    Sign in with Google. First time? Your admin account is created automatically.
                   </p>
                   {loading ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: 14 }}>
