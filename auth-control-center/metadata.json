@@ -1,6 +1,0 @@
-{
-  "name": "Auth Control Center",
-  "description": "Secure role-based authentication portal with owner, manager, and worker logins, driven by Firebase and Firestore data security rules.",
-  "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
