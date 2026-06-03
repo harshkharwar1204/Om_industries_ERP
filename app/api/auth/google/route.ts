@@ -1,67 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import { supabase } from '@/lib/supabase';
 import { JWT_SECRET } from '@/lib/auth';
 
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
+
 export async function POST(req: NextRequest) {
   try {
-    const { access_token } = await req.json();
-    if (!access_token) return NextResponse.json({ error: 'No access token' }, { status: 400 });
+    const { credential } = await req.json();
+    if (!credential) return NextResponse.json({ error: 'No credential' }, { status: 400 });
+    if (!CLIENT_ID) return NextResponse.json({ error: 'Google Client ID not configured on server' }, { status: 500 });
 
-    // Verify the Supabase access token and get user info
-    const { data: sbUser, error: sbErr } = await supabase.auth.getUser(access_token);
-    if (sbErr || !sbUser.user) {
-      return NextResponse.json({ error: 'Invalid Google session' }, { status: 401 });
-    }
+    // Verify the Google ID token
+    const client = new OAuth2Client(CLIENT_ID);
+    const ticket = await client.verifyIdToken({ idToken: credential, audience: CLIENT_ID });
+    const payload = ticket.getPayload();
+    if (!payload?.email) return NextResponse.json({ error: 'No email from Google' }, { status: 401 });
 
-    const email = sbUser.user.email;
-    if (!email) return NextResponse.json({ error: 'No email from Google' }, { status: 401 });
+    const { email, name: googleName, sub: googleId } = payload;
 
-    // Look up admin in erp_users by email
-    const { data: user, error } = await supabase
+    // Find admin by email or google_id
+    let { data: user } = await supabase
       .from('erp_users')
       .select('*')
-      .eq('email', email)
+      .or(`email.eq.${email},google_id.eq.${googleId}`)
       .eq('role', 'admin')
       .single();
 
-    if (error || !user) {
-      // Auto-create admin if this is the first Google login and no email-matched user exists
-      // Check if they're in erp_users at all (by Google UID)
-      const { data: byUid } = await supabase
-        .from('erp_users')
-        .select('*')
-        .eq('google_id', sbUser.user.id)
-        .single();
-
-      if (!byUid) {
-        return NextResponse.json({
-          error: `No admin account found for ${email}. Ask your administrator to link your Google account.`,
-        }, { status: 403 });
-      }
-
-      if (!byUid.is_active) return NextResponse.json({ error: 'Account deactivated' }, { status: 403 });
-
-      const payload = { id: byUid.id, name: byUid.name, phone: byUid.phone ?? '', role: byUid.role, department: byUid.department };
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      await supabase.from('sessions').insert([{ user_id: byUid.id, token, expires_at: expiresAt.toISOString() }]);
-      return NextResponse.json({ token, user: payload });
+    if (!user) {
+      return NextResponse.json({
+        error: `No admin account for ${email}. Ask admin to link your Google account.`,
+      }, { status: 403 });
     }
 
     if (!user.is_active) return NextResponse.json({ error: 'Account deactivated' }, { status: 403 });
 
-    // Update email/google_id if not already set
-    await supabase.from('erp_users').update({ email, google_id: sbUser.user.id }).eq('id', user.id);
+    // Persist email + google_id if not set
+    if (!user.email || !user.google_id) {
+      await supabase.from('erp_users').update({ email, google_id: googleId }).eq('id', user.id);
+    }
 
-    const payload = { id: user.id, name: user.name, phone: user.phone ?? '', role: user.role, department: user.department };
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+    const tokenPayload = {
+      id: user.id, name: user.name || googleName || email,
+      phone: user.phone ?? '', role: user.role, department: user.department,
+    };
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '30d' });
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await supabase.from('sessions').insert([{ user_id: user.id, token, expires_at: expiresAt.toISOString() }]);
 
-    return NextResponse.json({ token, user: payload });
+    return NextResponse.json({ token, user: tokenPayload });
   } catch (e: any) {
-    console.error('[google auth]', e);
-    return NextResponse.json({ error: 'Auth failed' }, { status: 500 });
+    console.error('[google auth]', e.message);
+    return NextResponse.json({ error: 'Google sign-in failed: ' + e.message }, { status: 500 });
   }
 }
