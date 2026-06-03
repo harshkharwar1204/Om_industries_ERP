@@ -116,6 +116,7 @@ export default function WorkersPage() {
             <select className="form-select" value={form.role} onChange={f('role')}>
               <option value="hanks_worker">Hanks Worker</option>
               <option value="coning_worker">Coning Worker</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
           <div className="form-group">
