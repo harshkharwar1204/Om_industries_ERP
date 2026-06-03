@@ -9,8 +9,7 @@ export async function GET(req: NextRequest) {
     const dept = req.nextUrl.searchParams.get('department');
     let query = supabase
       .from('erp_users')
-      .select('id, name, phone, role, department, is_active, created_at')
-      .neq('role', 'admin')
+      .select('id, name, phone, email, role, department, is_active, created_at')
       .order('name');
     if (dept) query = query.eq('department', dept);
     const { data, error } = await query;
@@ -25,14 +24,28 @@ export async function POST(req: NextRequest) {
   try {
     requireAdmin(req);
     const body = await req.json();
-    const { name, phone, pin, role, department } = body;
-    if (!name || !phone || !pin) return NextResponse.json({ error: 'Name, phone and PIN required' }, { status: 400 });
-    const pin_hash = await bcrypt.hash(String(pin), 10);
+    const { name, phone, email, pin, role, department } = body;
+
+    if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
+    if (!phone && !email) return NextResponse.json({ error: 'Phone or Gmail required' }, { status: 400 });
+
+    let pin_hash: string | null = null;
+    if (pin) pin_hash = await bcrypt.hash(String(pin), 10);
+
     const { data, error } = await supabase
       .from('erp_users')
-      .insert([{ name: name.trim(), phone: phone.trim(), pin_hash, role: role || 'hanks_worker', department: department || null, is_active: true }])
-      .select('id, name, phone, role, department, is_active')
+      .insert([{
+        name: name.trim(),
+        phone: phone?.trim() || null,
+        email: email?.trim() || null,
+        pin_hash,
+        role: role || 'hanks_worker',
+        department: department || null,
+        is_active: true,
+      }])
+      .select('id, name, phone, email, role, department, is_active')
       .single();
+
     if (error) throw error;
     return NextResponse.json(data, { status: 201 });
   } catch (e: any) {

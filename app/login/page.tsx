@@ -197,7 +197,7 @@ export default function LoginPage() {
               ) : (
                 <>
                   <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.5 }}>
-                    Sign in with Google. First time? Your admin account is created automatically.
+                    Sign in with Google. New users get an admin account automatically. Workers need to be added by admin first.
                   </p>
                   {loading ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: 14 }}>
@@ -206,7 +206,7 @@ export default function LoginPage() {
                   ) : (
                     <div ref={googleBtnRef} />
                   )}
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Workers: use the Phone + PIN tab</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Works for admins and workers (if Gmail was set by admin)</p>
                 </>
               )}
             </div>

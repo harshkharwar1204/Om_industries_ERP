@@ -6,12 +6,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     requireAdmin(req);
     const body = await req.json();
-    const { name, phone, role, department } = body;
+    const { name, phone, email, role, department } = body;
     const { data, error } = await supabase
       .from('erp_users')
-      .update({ name, phone, role, department })
+      .update({
+        name,
+        phone: phone || null,
+        email: email || null,
+        role,
+        department: department || null,
+      })
       .eq('id', params.id)
-      .select('id, name, phone, role, department, is_active')
+      .select('id, name, phone, email, role, department, is_active')
       .single();
     if (error) throw error;
     return NextResponse.json(data);

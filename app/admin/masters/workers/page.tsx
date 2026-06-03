@@ -4,7 +4,7 @@ import { apiFetch } from '@/lib/api';
 import { PageHeader, Modal, ConfirmDialog, StatusBadge, useToast, Icon } from '@/components/ui';
 
 interface Worker { id: number; name: string; phone: string; role: string; department: string | null; is_active: boolean; }
-const BLANK = { name: '', phone: '', role: 'hanks_worker', department: 'hanks', pin: '' };
+const BLANK = { name: '', phone: '', email: '', role: 'hanks_worker', department: 'hanks', pin: '' };
 
 export default function WorkersPage() {
   const [workers, setWorkers]   = useState<Worker[]>([]);
@@ -21,16 +21,17 @@ export default function WorkersPage() {
   const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(p => ({ ...p, [k]: e.target.value }));
 
   const openAdd  = () => { setEditing(null); setForm(BLANK); setModal(true); };
-  const openEdit = (w: Worker) => { setEditing(w); setForm({ name: w.name, phone: w.phone, role: w.role, department: w.department || 'hanks', pin: '' }); setModal(true); };
+  const openEdit = (w: Worker) => { setEditing(w); setForm({ name: w.name, phone: w.phone, email: (w as any).email || '', role: w.role, department: w.department || 'hanks', pin: '' }); setModal(true); };
 
   const save = async () => {
-    if (!form.name || !form.phone) { toast('Name and phone required', 'error'); return; }
+    if (!form.name) { toast('Name required', 'error'); return; }
+    if (!form.phone && !form.email) { toast('Phone or Gmail required', 'error'); return; }
     try {
       if (editing) {
         await apiFetch(`/workers/${editing.id}`, { method: 'PUT', body: JSON.stringify(form) });
         toast('Worker updated');
       } else {
-        if (form.pin.length < 4) { toast('4-digit PIN required', 'error'); return; }
+        if (!form.email && form.pin.length < 4) { toast('PIN required when no Gmail set', 'error'); return; }
         await apiFetch('/workers', { method: 'POST', body: JSON.stringify(form) });
         toast('Worker added');
       }
@@ -110,7 +111,8 @@ export default function WorkersPage() {
         footer={<><button className="btn btn-secondary" onClick={() => setModal(false)}>Cancel</button><button className="btn btn-primary" onClick={save}>Save</button></>}>
         <div className="form-row">
           <div className="form-group"><label className="form-label">Full Name *</label><input className="form-input" value={form.name} onChange={f('name')} placeholder="e.g. Ramesh Kumar" /></div>
-          <div className="form-group"><label className="form-label">Phone *</label><input className="form-input" type="tel" inputMode="numeric" value={form.phone} onChange={f('phone')} placeholder="10-digit number" /></div>
+          <div className="form-group"><label className="form-label">Phone</label><input className="form-input" type="tel" inputMode="numeric" value={form.phone} onChange={f('phone')} placeholder="10-digit number" /></div>
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}><label className="form-label">Gmail (for Google login)</label><input className="form-input" type="email" value={form.email} onChange={f('email')} placeholder="e.g. ramesh@gmail.com (optional)" /></div>
           <div className="form-group">
             <label className="form-label">Role</label>
             <select className="form-select" value={form.role} onChange={f('role')}>
@@ -129,8 +131,8 @@ export default function WorkersPage() {
           </div>
           {!editing && (
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">4-Digit PIN *</label>
-              <input className="form-input" type="password" inputMode="numeric" maxLength={4} value={form.pin} onChange={f('pin')} placeholder="e.g. 1234" />
+              <label className="form-label">4-Digit PIN {form.email ? '(optional — Gmail set)' : '*'}</label>
+              <input className="form-input" type="password" inputMode="numeric" maxLength={4} value={form.pin} onChange={f('pin')} placeholder={form.email ? 'Leave blank to use Google only' : 'e.g. 1234'} />
             </div>
           )}
         </div>
