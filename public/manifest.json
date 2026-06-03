@@ -1,0 +1,19 @@
+{
+  "name": "OM INDUSTRIES ERP",
+  "short_name": "OM ERP",
+  "description": "Production and salary tracking app for OM Industries, Surat",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#64748B",
+  "orientation": "portrait",
+  "categories": ["productivity", "business"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

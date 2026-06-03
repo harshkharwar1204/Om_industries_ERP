@@ -1,0 +1,528 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global safety net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Reusable, hardened helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+    
+    function isOwner() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == 'owner';
+    }
+    
+    function isManager() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == 'manager';
+    }
+    
+    function isWorker() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == 'worker';
+    }
+
+    function isOwnerOrManager() {
+      return isOwner() || isManager();
+    }
+    
+    // Entity helper functions (Validations)
+    function isValidUser(data) {
+      return data.userId is string 
+          && data.email is string && data.email.size() <= 200
+          && data.role is string && (data.role == 'owner' || data.role == 'manager' || data.role == 'worker')
+          && data.displayName is string && data.displayName.size() <= 100;
+    }
+    
+    function isValidPrivateInfo(data) {
+      return data.email is string && data.email.size() <= 200
+          && data.mobileNumber is string && data.mobileNumber.size() <= 30;
+    }
+    
+    function isValidWorkerLookup(data) {
+      return data.workerId is string && data.workerId.size() <= 50
+          && data.mobileNumber is string && data.mobileNumber.size() <= 30
+          && data.userId is string
+          && data.name is string && data.name.size() <= 100
+          && data.status is string && (data.status == 'active' || data.status == 'on_duty' || data.status == 'off_duty');
+    }
+
+    function isValidTask(data) {
+      return data.taskId is string && data.taskId.size() <= 128
+          && data.title is string && data.title.size() <= 200
+          && data.description is string && data.description.size() <= 2000
+          && data.assignedWorkerId is string
+          && data.createdBy is string
+          && data.status is string && (data.status == 'pending' || data.status == 'in_progress' || data.status == 'completed');
+    }
+
+    function isValidParty(data) {
+      return data.partyId is string && data.partyId.size() <= 128
+          && data.partyName is string && data.partyName.size() <= 200
+          && data.mobile is string && data.mobile.size() <= 30
+          && data.city is string && data.city.size() <= 100
+          && data.gst is string && data.gst.size() <= 20
+          && data.address is string && data.address.size() <= 500
+          && data.paymentTerms is string && data.paymentTerms.size() <= 100
+          && data.isDeleted is bool;
+    }
+
+    function isValidItem(data) {
+      return data.itemId is string && data.itemId.size() <= 128
+          && data.itemName is string && data.itemName.size() <= 200
+          && data.itemCode is string && data.itemCode.size() <= 100
+          && data.unit is string && data.unit.size() <= 20
+          && data.description is string && data.description.size() <= 1000
+          && data.isDeleted is bool;
+    }
+
+    function isValidShade(data) {
+      return data.shadeId is string && data.shadeId.size() <= 128
+          && data.shadeName is string && data.shadeName.size() <= 200
+          && data.shadeCode is string && data.shadeCode.size() <= 100
+          && data.description is string && data.description.size() <= 1000
+          && data.isDeleted is bool;
+    }
+
+    function isValidMachine(data) {
+      return data.machineId is string && data.machineId.size() <= 128
+          && data.machineName is string && data.machineName.size() <= 200
+          && data.machineCode is string && data.machineCode.size() <= 100
+          && data.capacity is string && data.capacity.size() <= 100
+          && data.machineType is string && data.machineType.size() <= 100
+          && data.status is string && (data.status == 'active' || data.status == 'inactive' || data.status == 'maintenance')
+          && data.isDeleted is bool;
+    }
+
+    function isValidRate(data) {
+      return data.rateId is string && data.rateId.size() <= 128
+          && data.partyId is string && data.partyId.size() <= 128
+          && data.itemId is string && data.itemId.size() <= 128
+          && data.shadeId is string && data.shadeId.size() <= 128
+          && (data.rate is float || data.rate is int)
+          && data.effectiveDate is string && data.effectiveDate.size() <= 50
+          && data.isDeleted is bool;
+    }
+
+    function isValidWorkerMaster(data) {
+      return data.workerId is string && data.workerId.size() <= 128
+          && data.workerName is string && data.workerName.size() <= 200
+          && data.mobile is string && data.mobile.size() <= 30
+          && data.address is string && data.address.size() <= 1000
+          && data.unit is string && data.unit.size() <= 100
+          && data.role is string && data.role.size() <= 100
+          && (data.rate is float || data.rate is int)
+          && data.isDeleted is bool
+          && (!('workerType' in data) || data.workerType is string)
+          && (!('facePhoto' in data) || data.facePhoto is string);
+    }
+
+    function isValidPartyOrder(data) {
+      return data.orderId is string && data.orderId.size() <= 128
+          && data.partyId is string && data.partyId.size() <= 128
+          && data.partyName is string && data.partyName.size() <= 200
+          && data.poNumber is string && data.poNumber.size() <= 100
+          && data.itemId is string && data.itemId.size() <= 128
+          && data.itemName is string && data.itemName.size() <= 200
+          && data.count is string && data.count.size() <= 100
+          && data.shadeId is string && data.shadeId.size() <= 128
+          && data.shadeName is string && data.shadeName.size() <= 200
+          && (data.qtyKg is float || data.qtyKg is int)
+          && (data.rate is float || data.rate is int)
+          && data.deliveryDate is string && data.deliveryDate.size() <= 100
+          && data.priority is string && data.priority.size() <= 50
+          && data.status is string && data.status.size() <= 50
+          && data.isDeleted is bool;
+    }
+
+    function isValidGreyStock(data) {
+      return data.lotId is string && data.lotId.size() <= 128
+          && data.date is string && data.date.size() <= 100
+          && data.challanNo is string && data.challanNo.size() <= 100
+          && data.partyId is string && data.partyId.size() <= 128
+          && data.partyName is string && data.partyName.size() <= 200
+          && data.orderId is string && data.orderId.size() <= 128
+          && data.itemId is string && data.itemId.size() <= 128
+          && data.itemName is string && data.itemName.size() <= 200
+          && data.count is string && data.count.size() <= 100
+          && (data.receivedQtyKg is float || data.receivedQtyKg is int)
+          && (data.conesBags is float || data.conesBags is int)
+          && data.isDeleted is bool;
+    }
+
+    function isValidHanksProduction(data) {
+      return data.productionId is string && data.productionId.size() <= 128
+          && data.lotId is string && data.lotId.size() <= 128
+          && data.bagNo is string && data.bagNo.size() <= 128
+          && data.workerId is string && data.workerId.size() <= 128
+          && data.workerName is string && data.workerName.size() <= 200
+          && data.process is string && data.process.size() <= 100
+          && (data.inputKg is float || data.inputKg is int)
+          && (data.outputKg is float || data.outputKg is int)
+          && (data.lossPercent is float || data.lossPercent is int)
+          && data.status is string && data.status.size() <= 50
+          && data.isDeleted is bool;
+    }
+
+    function isValidDyeingProduction(data) {
+      return data.dyeingId is string && data.dyeingId.size() <= 128
+          && data.lotId is string && data.lotId.size() <= 128
+          && data.bagNo is string && data.bagNo.size() <= 128
+          && data.partyName is string && data.partyName.size() <= 200
+          && data.shade is string && data.shade.size() <= 200
+          && data.recipe is string && data.recipe.size() <= 300
+          && data.machine is string && data.machine.size() <= 128
+          && data.operatorId is string && data.operatorId.size() <= 128
+          && data.operatorName is string && data.operatorName.size() <= 200
+          && data.helperId is string && data.helperId.size() <= 128
+          && data.helperName is string && data.helperName.size() <= 200
+          && (data.inputKg is float || data.inputKg is int)
+          && (data.outputKg is float || data.outputKg is int)
+          && (data.lossPercent is float || data.lossPercent is int)
+          && data.status is string && data.status.size() <= 50
+          && data.isDeleted is bool;
+    }
+
+    function isValidConningProduction(data) {
+      return data.conningId is string && data.conningId.size() <= 128
+          && data.lotId is string && data.lotId.size() <= 128
+          && data.bagNo is string && data.bagNo.size() <= 128
+          && data.partyName is string && data.partyName.size() <= 200
+          && data.shade is string && data.shade.size() <= 200
+          && (data.coneWeight is float || data.coneWeight is int)
+          && (data.conesCount is int)
+          && (data.outputKg is float || data.outputKg is int)
+          && data.quality is string && data.quality.size() <= 50
+          && data.status is string && data.status.size() <= 50
+          && data.isDeleted is bool;
+    }
+
+    function isValidReadyStock(data) {
+      return data.stockId is string && data.stockId.size() <= 128
+          && data.lotId is string && data.lotId.size() <= 128
+          && data.bagNo is string && data.bagNo.size() <= 128
+          && data.partyName is string && data.partyName.size() <= 200
+          && data.shade is string && data.shade.size() <= 200
+          && (data.conesCount is int)
+          && (data.weightKg is float || data.weightKg is int)
+          && data.grade is string && data.grade.size() <= 50
+          && data.warehouseLocation is string && data.warehouseLocation.size() <= 200
+          && data.status is string && data.status.size() <= 50
+          && data.isDeleted is bool;
+    }
+
+    function isValidDispatchTransaction(data) {
+      return data.dispatchId is string && data.dispatchId.size() <= 128
+          && data.invoiceNo is string && data.invoiceNo.size() <= 100
+          && data.partyId is string && data.partyId.size() <= 128
+          && data.partyName is string && data.partyName.size() <= 200
+          && data.orderId is string && data.orderId.size() <= 128
+          && data.lotId is string && data.lotId.size() <= 128
+          && data.itemName is string && data.itemName.size() <= 200
+          && data.shade is string && data.shade.size() <= 200
+          && (data.dispatchKg is float || data.dispatchKg is int)
+          && (data.rate is float || data.rate is int)
+          && (data.amount is float || data.amount is int)
+          && data.vehicleNo is string && data.vehicleNo.size() <= 105
+          && data.lrNo is string && data.lrNo.size() <= 105
+          && data.status is string && (data.status == 'Pending' || data.status == 'Dispatched' || data.status == 'Cancelled')
+          && data.isDeleted is bool;
+    }
+
+    function isValidPaymentCollection(data) {
+      return data.paymentId is string && data.paymentId.size() <= 128
+          && data.partyId is string && data.partyId.size() <= 128
+          && data.partyName is string && data.partyName.size() <= 200
+          && data.paymentDate is string && data.paymentDate.size() <= 100
+          && data.mode is string && (data.mode == 'Cash' || data.mode == 'UPI' || data.mode == 'Bank Transfer' || data.mode == 'Cheque')
+          && data.referenceNo is string && data.referenceNo.size() <= 200
+          && (data.amount is float || data.amount is int)
+          && data.notes is string && data.notes.size() <= 1005
+          && data.isDeleted is bool;
+    }
+
+    function isValidLedgerAdjustment(data) {
+      return data.adjustmentId is string && data.adjustmentId.size() <= 128
+          && data.partyId is string && data.partyId.size() <= 128
+          && data.partyName is string && data.partyName.size() <= 200
+          && data.date is string && data.date.size() <= 100
+          && data.type is string && (data.type == 'Debit' || data.type == 'Credit')
+          && data.particulars is string && data.particulars.size() <= 1005
+          && (data.amount is float || data.amount is int)
+          && data.isDeleted is bool;
+    }
+
+    function isValidWorkerAttendance(data) {
+      return data.attendanceId is string && data.attendanceId.size() <= 128
+          && data.workerId is string && data.workerId.size() <= 128
+          && data.workerName is string && data.workerName.size() <= 200
+          && data.date is string && data.date.size() <= 50
+          && data.status is string && (data.status == 'Present' || data.status == 'Half Day' || data.status == 'Absent' || data.status == 'Leave')
+          && (data.dailyRate is float || data.dailyRate is int)
+          && (data.earnedAmount is float || data.earnedAmount is int)
+          && data.isDeleted is bool;
+    }
+
+    function isValidWorkerPagar(data) {
+      return data.pagarId is string && data.pagarId.size() <= 128
+          && data.workerId is string && data.workerId.size() <= 128
+          && data.workerName is string && data.workerName.size() <= 200
+          && data.periodStart is string && data.periodStart.size() <= 50
+          && data.periodEnd is string && data.periodEnd.size() <= 50
+          && (data.grossWages is float || data.grossWages is int)
+          && (data.upaadDeducted is float || data.upaadDeducted is int)
+          && (data.loanDeducted is float || data.loanDeducted is int)
+          && (data.bonusAmount is float || data.bonusAmount is int)
+          && (data.netWages is float || data.netWages is int);
+    }
+
+    function isValidWorkerUpaad(data) {
+      return data.upaadId is string && data.upaadId.size() <= 128
+          && data.workerId is string && data.workerId.size() <= 128
+          && data.workerName is string && data.workerName.size() <= 200
+          && data.date is string && data.date.size() <= 50
+          && (data.amount is float || data.amount is int)
+          && data.particulars is string && data.particulars.size() <= 1000
+          && data.isDeleted is bool;
+    }
+
+    function isValidWorkerLoan(data) {
+      return data.loanId is string && data.loanId.size() <= 128
+          && data.workerId is string && data.workerId.size() <= 128
+          && data.workerName is string && data.workerName.size() <= 200
+          && data.date is string && data.date.size() <= 50
+          && (data.loanAmount is float || data.loanAmount is int)
+          && (data.haptaAmount is float || data.haptaAmount is int)
+          && (data.totalPaid is float || data.totalPaid is int)
+          && (data.outstanding is float || data.outstanding is int)
+          && data.particulars is string && data.particulars.size() <= 1000
+          && data.isDeleted is bool;
+    }
+
+    function isValidWorkerHapta(data) {
+      return data.haptaId is string && data.haptaId.size() <= 128
+          && data.loanId is string && data.loanId.size() <= 128
+          && data.workerId is string && data.workerId.size() <= 128
+          && data.workerName is string && data.workerName.size() <= 200
+          && data.date is string && data.date.size() <= 50
+          && (data.amount is float || data.amount is int)
+          && data.remarks is string && data.remarks.size() <= 1000
+          && data.isDeleted is bool;
+    }
+
+    // Paths matching firebase-blueprint.json
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && isOwnerOrManager();
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUser(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUser(request.resource.data) && request.resource.data.updatedAt == request.time && request.resource.data.role == resource.data.role;
+      allow delete: if false;
+      
+      // Private split subcollection for PII
+      match /private/info {
+        allow read: if isSignedIn() && (userId == request.auth.uid || isOwner());
+        allow create, update: if isSignedIn() && userId == request.auth.uid && isValidPrivateInfo(request.resource.data) && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+    }
+    
+    // Workers custom lookups - can list or get during custom login
+    match /workers/{workerId} {
+      allow read: if true; // Needs to look up worker records prior to logging in or during sign-in mapping!
+      allow create: if isOwnerOrManager() && isValidId(workerId) && isValidWorkerLookup(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if (isOwnerOrManager() && isValidId(workerId) && isValidWorkerLookup(request.resource.data) && request.resource.data.updatedAt == request.time)
+                    || (isSignedIn() && request.auth.uid == resource.data.userId && isValidWorkerLookup(request.resource.data) && request.resource.data.updatedAt == request.time && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+      allow delete: if isOwner();
+    }
+    
+    // Tasks collection
+    match /tasks/{taskId} {
+      allow get: if isSignedIn() && (isOwnerOrManager() || resource.data.assignedWorkerId == getUserData(request.auth.uid).displayName || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).keys().hasAll(['workerId']) && resource.data.assignedWorkerId == getUserData(request.auth.uid).workerId)); 
+      allow list: if isSignedIn() && (isOwnerOrManager() || resource.data.assignedWorkerId == getUserData(request.auth.uid).displayName || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).keys().hasAll(['workerId']) && resource.data.assignedWorkerId == getUserData(request.auth.uid).workerId));
+      
+      allow create: if isOwnerOrManager() && isValidId(taskId) && isValidTask(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if (isOwnerOrManager() && isValidId(taskId) && isValidTask(request.resource.data) && request.resource.data.updatedAt == request.time)
+                    || (isWorker() && isValidId(taskId) && isValidTask(request.resource.data) && request.resource.data.updatedAt == request.time && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+      allow delete: if isOwnerOrManager();
+    }
+
+    // Parties collection
+    match /parties/{partyId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(partyId) && isValidParty(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(partyId) && isValidParty(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Items collection
+    match /items/{itemId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(itemId) && isValidItem(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(itemId) && isValidItem(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Shades collection
+    match /shades/{shadeId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(shadeId) && isValidShade(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(shadeId) && isValidShade(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Machines collection
+    match /machines/{machineId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(machineId) && isValidMachine(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(machineId) && isValidMachine(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Rates collection
+    match /rates/{rateId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(rateId) && isValidRate(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(rateId) && isValidRate(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Worker Masters collection
+    match /worker_masters/{workerId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(workerId) && isValidWorkerMaster(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(workerId) && isValidWorkerMaster(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Party Orders collection
+    match /party_orders/{orderId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(orderId) && isValidPartyOrder(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(orderId) && isValidPartyOrder(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Grey Stocks collection
+    match /grey_stocks/{lotId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(lotId) && isValidGreyStock(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(lotId) && isValidGreyStock(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Hanks Productions collection
+    match /hanks_productions/{productionId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(productionId) && isValidHanksProduction(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(productionId) && isValidHanksProduction(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Dyeing Productions collection
+    match /dyeing_productions/{dyeingId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(dyeingId) && isValidDyeingProduction(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(dyeingId) && isValidDyeingProduction(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Conning Productions collection
+    match /conning_productions/{conningId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(conningId) && isValidConningProduction(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(conningId) && isValidConningProduction(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Ready Stocks collection
+    match /ready_stocks/{stockId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(stockId) && isValidReadyStock(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(stockId) && isValidReadyStock(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Dispatches collection
+    match /dispatches/{dispatchId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(dispatchId) && isValidDispatchTransaction(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(dispatchId) && isValidDispatchTransaction(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Payment Collections collection
+    match /payment_collections/{paymentId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(paymentId) && isValidPaymentCollection(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(paymentId) && isValidPaymentCollection(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Ledger Adjustments collection
+    match /ledger_adjustments/{adjustmentId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(adjustmentId) && isValidLedgerAdjustment(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(adjustmentId) && isValidLedgerAdjustment(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Worker Pagars collection
+    match /worker_pagars/{pagarId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(pagarId) && isValidWorkerPagar(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(pagarId) && isValidWorkerPagar(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Worker Upaads collection
+    match /worker_upaads/{upaadId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(upaadId) && isValidWorkerUpaad(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(upaadId) && isValidWorkerUpaad(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Worker Loans collection
+    match /worker_loans/{loanId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(loanId) && isValidWorkerLoan(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(loanId) && isValidWorkerLoan(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Worker Haptas collection
+    match /worker_haptas/{haptaId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(haptaId) && isValidWorkerHapta(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(haptaId) && isValidWorkerHapta(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Attendance logs collection
+    match /attendance_logs/{attendanceId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnerOrManager() && isValidId(attendanceId) && isValidWorkerAttendance(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if isOwnerOrManager() && isValidId(attendanceId) && isValidWorkerAttendance(request.resource.data) && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
+    // Audit logs collection
+    match /audit_logs/{logId} {
+      allow read: if isSignedIn() && isOwnerOrManager();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}
