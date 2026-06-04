@@ -6,20 +6,59 @@ import { useAuth } from '@/context/AuthContext';
 import { Icon } from '@/components/ui';
 
 interface NavItem { id: string; label: string; icon: string; href: string; }
+interface NavSection { label: string; items: NavItem[]; }
 
-const NAV: NavItem[] = [
-  { id: 'dashboard',   label: 'Dashboard',        icon: 'layout-dashboard', href: '/admin/dashboard' },
-  { id: 'hanks',       label: 'Hanks Production',  icon: 'factory',          href: '/admin/production/hanks' },
-  { id: 'stock',       label: 'Stock Inward',       icon: 'package-plus',     href: '/admin/stock-inward' },
-  { id: 'workers',     label: 'Workers',            icon: 'users',            href: '/admin/masters/workers' },
-  { id: 'clients',     label: 'Clients',            icon: 'archive',          href: '/admin/masters/clients' },
-  { id: 'qualities',   label: 'Qualities',          icon: 'box',              href: '/admin/masters/qualities' },
-  { id: 'advances',    label: 'Advances',           icon: 'indian-rupee',     href: '/admin/advances' },
-  { id: 'payroll',     label: 'Payroll',            icon: 'file-bar-chart',   href: '/admin/payroll' },
-  { id: 'recipes',     label: 'Color Recipes',      icon: 'flask-conical',    href: '/admin/recipes' },
+const NAV_SECTIONS: NavSection[] = [
+  {
+    label: 'Production',
+    items: [
+      { id: 'dashboard',   label: 'Dashboard',          icon: 'layout-dashboard', href: '/admin/dashboard' },
+      { id: 'hanks',       label: 'Hanks Production',   icon: 'factory',          href: '/admin/production/hanks' },
+      { id: 'conning',     label: 'Conning Production', icon: 'box',              href: '/admin/production/conning' },
+      { id: 'dyeing',      label: 'Dyeing Production',  icon: 'droplets',         href: '/admin/production/dyeing' },
+      { id: 'ready-stock', label: 'Ready Stock',         icon: 'warehouse',        href: '/admin/ready-stock' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { id: 'stock',    label: 'Stock Inward', icon: 'package-plus',   href: '/admin/stock-inward' },
+      { id: 'orders',   label: 'Orders',       icon: 'clipboard-list', href: '/admin/orders' },
+      { id: 'dispatch', label: 'Dispatch',     icon: 'truck',          href: '/admin/dispatch' },
+    ],
+  },
+  {
+    label: 'Finance',
+    items: [
+      { id: 'finance-clients', label: 'Client Finance', icon: 'wallet',         href: '/admin/finance/clients' },
+      { id: 'finance-workers', label: 'Worker Loans',   icon: 'banknote',       href: '/admin/finance/workers' },
+      { id: 'advances',        label: 'Advances',       icon: 'indian-rupee',   href: '/admin/advances' },
+      { id: 'payroll',         label: 'Payroll',        icon: 'file-bar-chart', href: '/admin/payroll' },
+    ],
+  },
+  {
+    label: 'Masters',
+    items: [
+      { id: 'workers',   label: 'Workers',   icon: 'users',   href: '/admin/masters/workers' },
+      { id: 'clients',   label: 'Clients',   icon: 'archive', href: '/admin/masters/clients' },
+      { id: 'qualities', label: 'Qualities', icon: 'layers',  href: '/admin/masters/qualities' },
+      { id: 'machines',  label: 'Machines',  icon: 'cpu',     href: '/admin/masters/machines' },
+      { id: 'shades',    label: 'Shades',    icon: 'palette', href: '/admin/masters/shades' },
+      { id: 'items',     label: 'Items',     icon: 'tag',     href: '/admin/masters/items' },
+    ],
+  },
+  {
+    label: 'Other',
+    items: [
+      { id: 'attendance', label: 'Attendance',    icon: 'calendar-check', href: '/admin/attendance' },
+      { id: 'reports',    label: 'Reports',       icon: 'bar-chart-3',    href: '/admin/reports' },
+      { id: 'recipes',    label: 'Color Recipes', icon: 'flask-conical',  href: '/admin/recipes' },
+    ],
+  },
 ];
 
-const BOTTOM_NAV = NAV.slice(0, 5);
+const ALL_NAV    = NAV_SECTIONS.flatMap(s => s.items);
+const BOTTOM_NAV = [ALL_NAV[0], ALL_NAV[1], ALL_NAV[2], ALL_NAV[3], ALL_NAV[12]];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -45,7 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null;
   }
 
-  const activeId = NAV.find(n => pathname?.startsWith(n.href))?.id ?? 'dashboard';
+  const activeId = ALL_NAV.find(n => pathname?.startsWith(n.href))?.id ?? 'dashboard';
 
   const handleLogout = () => {
     logout();
@@ -81,16 +120,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav className="sidebar-nav">
-          <div className="sidebar-section-label">Navigation</div>
-          {NAV.map(item => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`nav-item ${activeId === item.id ? 'active' : ''}`}
-            >
-              <Icon name={item.icon} size={18} className="nav-icon" />
-              {item.label}
-            </Link>
+          {NAV_SECTIONS.map(section => (
+            <div key={section.label}>
+              <div className="sidebar-section-label">{section.label}</div>
+              {section.items.map(item => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={`nav-item ${activeId === item.id ? 'active' : ''}`}
+                >
+                  <Icon name={item.icon} size={18} className="nav-icon" />
+                  {item.label}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
 
