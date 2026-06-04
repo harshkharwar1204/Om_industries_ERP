@@ -31,13 +31,13 @@ export async function GET(req: NextRequest, { params }: { params: { type: string
 
       case 'stock': {
         const [inward, ready] = await Promise.all([
-          supabase.from('stock_inward').select('date, received_weight_kg, remaining_weight_kg, clients(name), qualities(name)').order('date', { ascending: false }),
+          supabase.from('stock_inward').select('date, weight_kg, remaining_weight_kg, clients(name), qualities(name)').order('date', { ascending: false }),
           supabase.from('ready_stock').select('weight_kg, grade, status, shades(name)').order('created_at', { ascending: false }),
         ]);
         if (inward.error) throw inward.error;
         if (ready.error) throw ready.error;
         return NextResponse.json({
-          inward: (inward.data ?? []).map((r: any) => ({ client: r.clients?.name, quality: r.qualities?.name, date: r.date, received_kg: r.received_weight_kg, remaining_kg: r.remaining_weight_kg })),
+          inward: (inward.data ?? []).map((r: any) => ({ client: r.clients?.name, quality: r.qualities?.name, date: r.date, received_kg: r.weight_kg, remaining_kg: r.remaining_weight_kg })),
           ready:  (ready.data ?? []).map((r: any) => ({ shade: r.shades?.name, weight_kg: r.weight_kg, grade: r.grade, status: r.status })),
         });
       }
