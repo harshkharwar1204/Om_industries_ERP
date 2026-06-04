@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from('erp_users')
       .select('id, name, phone, email, role, department, is_active, created_at')
+      .neq('role', 'admin')
       .order('name');
     if (dept) query = query.eq('department', dept);
     const { data, error } = await query;
