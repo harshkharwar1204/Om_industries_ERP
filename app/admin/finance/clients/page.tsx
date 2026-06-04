@@ -69,13 +69,14 @@ export default function ClientFinancePage() {
 
   const submit = async (type: 'credit' | 'adjustment') => {
     if (!form.client_id || !form.amount) { toast('Client and amount required', 'error'); return; }
+    const submittedClientId = form.client_id;
     setSaving(true);
     try {
       await apiFetch('/finance/clients', { method: 'POST', body: JSON.stringify({ ...form, type }) });
       toast(type === 'credit' ? 'Payment recorded' : 'Adjustment saved');
       setForm(BLANK);
       loadSummary();
-      if (selected && String(selected) === form.client_id) loadLedger(Number(form.client_id));
+      if (selected && String(selected) === submittedClientId) loadLedger(Number(submittedClientId));
     } catch (e: any) { toast(e.message, 'error'); }
     finally { setSaving(false); }
   };
@@ -229,7 +230,7 @@ export default function ClientFinancePage() {
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Particulars *</label>
+                <label className="form-label">Particulars</label>
                 <input className="form-input" value={form.particulars} onChange={f('particulars')} placeholder="Return / damage deduction…" />
               </div>
               <button className="btn btn-primary" style={{ width: '100%', fontSize: 15 }} onClick={() => submit('adjustment')} disabled={saving}>
