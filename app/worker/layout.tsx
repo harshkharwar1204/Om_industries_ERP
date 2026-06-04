@@ -5,9 +5,11 @@ import { useAuth } from '@/context/AuthContext';
 import { Icon } from '@/components/ui';
 
 const NAV = [
-  { href: '/worker',          icon: 'home',           label: 'Entry' },
-  { href: '/worker/history',  icon: 'clipboard-list', label: 'History' },
-  { href: '/worker/advances', icon: 'indian-rupee',   label: 'Advance' },
+  { href: '/worker',            icon: 'home',            label: 'Entry' },
+  { href: '/worker/history',    icon: 'clipboard-list',  label: 'History' },
+  { href: '/worker/advances',   icon: 'indian-rupee',    label: 'Advance' },
+  { href: '/worker/attendance', icon: 'calendar-check',  label: 'Attend' },
+  { href: '/worker/payslip',    icon: 'file-text',       label: 'Payslip' },
 ];
 
 export default function WorkerLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +26,7 @@ export default function WorkerLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  if (!user || !['hanks_worker', 'coning_worker'].includes(user.role)) {
+  if (!user || !['hanks_worker', 'coning_worker', 'dyeing_master'].includes(user.role)) {
     router.replace('/login');
     return null;
   }
