@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     if (!month || !year) return NextResponse.json({ error: 'month and year required' }, { status: 400 });
 
     const start = `${year}-${String(month).padStart(2, '0')}-01`;
-    const end   = `${year}-${String(month).padStart(2, '0')}-31`;
+    const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
 
     const [prodRes, advRes] = await Promise.all([
       supabase.from('hanks_production')
@@ -40,6 +40,6 @@ export async function GET(req: NextRequest) {
       net_wages:      Number(Math.max(0, gross_wages - total_advances).toFixed(2)),
     });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 401 });
+    return NextResponse.json({ error: e.message }, { status: e.message.includes('required') ? 403 : 401 });
   }
 }
