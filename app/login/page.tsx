@@ -83,8 +83,8 @@ export default function LoginPage() {
       }
 
       localStorage.setItem('erp_token', data.token);
-      toast(`Welcome, ${data.user.name}!`);
-      router.replace(data.user.role === 'admin' ? '/admin/dashboard' : '/worker');
+      // Full reload so AuthContext re-reads the new token from localStorage
+      window.location.href = data.user.role === 'admin' ? '/admin/dashboard' : '/worker';
     } catch (e: any) {
       setError(e.message || 'Sign-in failed');
       setLoading(false);
