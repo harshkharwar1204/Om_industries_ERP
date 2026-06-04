@@ -74,6 +74,14 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Sign-in failed'); setLoading(false); return; }
+
+      if (data.isNew) {
+        // New user — go to onboarding to pick role
+        sessionStorage.setItem('google_onboarding', JSON.stringify({ credential: response.credential, profile: data.profile }));
+        router.replace('/onboarding');
+        return;
+      }
+
       localStorage.setItem('erp_token', data.token);
       toast(`Welcome, ${data.user.name}!`);
       router.replace(data.user.role === 'admin' ? '/admin/dashboard' : '/worker');
@@ -197,7 +205,7 @@ export default function LoginPage() {
               ) : (
                 <>
                   <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.5 }}>
-                    Sign in with Google. New users get an admin account automatically. Workers need to be added by admin first.
+                    Sign in with your Google account. First time? You'll choose your role — Admin or Worker.
                   </p>
                   {loading ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: 14 }}>
@@ -206,7 +214,7 @@ export default function LoginPage() {
                   ) : (
                     <div ref={googleBtnRef} />
                   )}
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Works for admins and workers (if Gmail was set by admin)</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Works for admins and workers</p>
                 </>
               )}
             </div>
