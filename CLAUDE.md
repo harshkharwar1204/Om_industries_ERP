@@ -475,15 +475,25 @@ Worker production entry (`/worker/page.tsx`) needs:
 - **Reports** — API at `app/api/reports/[type]/route.ts` (6 types: production, stock, dispatch, finance, worker-performance, party-ledger; date range filter). Admin page at `app/admin/reports/page.tsx` (CSV export built-in, client-side generation).
 - **Worker Payslip** — API at `app/api/payroll/hanks/my/route.ts` (GET monthly summary with advances deduction). Worker page at `app/worker/payslip/page.tsx`. Payslip tab added to worker bottom nav.
 - **Admin nav restructured** — Sidebar now has 5 sections: Production / Operations / Finance / Masters / Other. Finance section links to Client Finance, Worker Loans, Advances, Payroll.
+- **Dashboard revamped** — `app/admin/dashboard/page.tsx`. 8 KPI cards (pending approvals split by type, pending orders, client outstanding, today's dispatch amount, ready stock kg, loan outstanding, attendance today, workers). Auto-refresh every 30s with manual refresh + timestamp. Recent dispatches table. 6 quick actions. Pending approval alert banner with direct approve links.
+
+### Bug Fixes (post-build)
+- **Payslip date range** — `app/api/payroll/hanks/my/route.ts`: end date now uses `new Date(year, month, 0)` to get actual last day of month (was hardcoded `–31`)
+- **Stock report column** — `app/api/reports/[type]/route.ts`: `stock_inward` query used nonexistent `received_weight_kg`; fixed to `weight_kg`
+- **Finance report adjustments** — `app/api/reports/[type]/route.ts`: finance summary now tracks `debit`, `credit`, `adjustment` as separate columns; `balance = debit - credit - adjustment`
+- **Client ledger UI adjustments** — `app/admin/finance/clients/page.tsx`: adjustment type now renders in blue with `(adj)` tag, distinct from credit
+- **Hapta race condition** — `app/api/loans/[id]/hapta/route.ts`: after inserting repayment, recomputes `total_paid` via SUM of all `loan_repayments` rows (not stale in-memory value)
+- **Shades FK alias conflict** — Supabase PostgREST throws `column shades_1.name does not exist` when `shades` is joined alongside other FK relationships. Fixed by removing `shades(name)` join from `orders`, `stock/ready`, and `dispatch` APIs; pages look up shade name from locally loaded shades array instead.
 
 ### 🔲 Next
 
-**Phase 2 complete.** All features built.
+**Phase 2 complete.** All features built and tested.
 
 Known tech debt:
 - Topbar search is decorative
 - Bell icon notifications are decorative
 - Worker history has no date/month filter
+- Dispatch page: shade name not shown in table (removed to fix Supabase FK alias conflict)
 
 ---
 
@@ -492,3 +502,4 @@ Known tech debt:
 - Topbar search input is decorative — no functionality
 - Bell icon notifications — decorative
 - Worker history has no date/month filter
+- Dispatch page shade column: `ready_stock → shades` nested join causes `shades_2.name` Supabase error; workaround is to not join shades in dispatch API
