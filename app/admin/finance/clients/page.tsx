@@ -147,8 +147,12 @@ export default function ClientFinancePage() {
                           <td style={{ fontFamily: 'var(--font-heading)', color: r.type === 'debit' ? 'var(--danger)' : undefined }}>
                             {r.type === 'debit' ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—'}
                           </td>
-                          <td style={{ fontFamily: 'var(--font-heading)', color: r.type !== 'debit' ? 'var(--success)' : undefined }}>
-                            {r.type !== 'debit' ? `₹${Number(r.amount).toLocaleString('en-IN')}` : '—'}
+                          <td style={{ fontFamily: 'var(--font-heading)', color: r.type === 'credit' ? 'var(--success)' : r.type === 'adjustment' ? 'var(--info)' : undefined }}>
+                            {r.type !== 'debit' ? (
+                              <span>{`₹${Number(r.amount).toLocaleString('en-IN')}`}
+                                {r.type === 'adjustment' && <span style={{ fontSize: 11, marginLeft: 4, opacity: 0.7 }}>(adj)</span>}
+                              </span>
+                            ) : '—'}
                           </td>
                           <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: r.balance > 0 ? 'var(--warning)' : 'var(--success)' }}>
                             ₹{r.balance.toLocaleString('en-IN')}

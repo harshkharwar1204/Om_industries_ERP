@@ -63,11 +63,18 @@ export async function GET(req: NextRequest, { params }: { params: { type: string
         const map: Record<number, any> = {};
         for (const t of (data ?? [])) {
           const id = t.client_id;
-          if (!map[id]) map[id] = { client: (t as any).clients?.name ?? `Client ${id}`, debit: 0, credit: 0 };
+          if (!map[id]) map[id] = { client: (t as any).clients?.name ?? `Client ${id}`, debit: 0, credit: 0, adjustment: 0 };
           if (t.type === 'debit') map[id].debit += Number(t.amount);
-          else map[id].credit += Number(t.amount);
+          else if (t.type === 'credit') map[id].credit += Number(t.amount);
+          else map[id].adjustment += Number(t.amount);
         }
-        return NextResponse.json(Object.values(map).map(r => ({ ...r, balance: Number((r.debit - r.credit).toFixed(2)) })));
+        return NextResponse.json(Object.values(map).map(r => ({
+          ...r,
+          debit:      Number(r.debit.toFixed(2)),
+          credit:     Number(r.credit.toFixed(2)),
+          adjustment: Number(r.adjustment.toFixed(2)),
+          balance:    Number((r.debit - r.credit - r.adjustment).toFixed(2)),
+        })));
       }
 
       case 'worker-performance': {
