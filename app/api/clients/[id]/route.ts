@@ -7,7 +7,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     requireAdmin(req);
     const body = await req.json();
     const { data, error } = await supabase
-      .from('clients').update({ name: body.name, address: body.address })
+      .from('clients').update({
+        name:             body.name,
+        address:          body.address            || null,
+        phone:            body.phone?.replace(/\D/g,'') || null,
+        gstin:            body.gstin?.trim()      || null,
+        state_code:       body.state_code?.trim() || '24',
+        dealer_type:      body.dealer_type        || 'registered',
+        portal_enabled:   body.portal_enabled     ?? false,
+        portal_passcode:  body.portal_passcode?.trim() || null,
+      })
       .eq('id', params.id).select().single();
     if (error) throw error;
     return NextResponse.json(data);

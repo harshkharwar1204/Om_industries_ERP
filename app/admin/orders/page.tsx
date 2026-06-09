@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { PageHeader, Modal, ConfirmDialog, useToast, Icon } from '@/components/ui';
+import { PageHeader, Modal, ConfirmDialog, SearchableDropdown, useToast, Icon } from '@/components/ui';
 
 interface Order {
   id: number; po_number: string | null; qty_kg: number | null; rate: number | null;
@@ -9,7 +9,7 @@ interface Order {
   clients?: { name: string }; shade_id?: number | null; items?: { name: string; unit: string };
 }
 
-const BLANK = { client_id: '', po_number: '', item_id: '', shade_id: '', qty_kg: '', rate: '', delivery_date: '', priority: 'medium' };
+const BLANK = { client_id: '', quality_id: '', po_number: '', item_id: '', shade_id: '', qty_kg: '', rate: '', delivery_date: '', priority: 'medium' };
 const PRIORITIES = ['low','medium','high','urgent'];
 const STATUSES   = ['pending','processing','completed','cancelled'];
 const PRI_COLORS: Record<string,string> = { low: 'var(--text-secondary)', medium: 'var(--info)', high: 'var(--warning)', urgent: 'var(--danger)' };
@@ -21,6 +21,7 @@ export default function OrdersPage() {
   const [clients, setClients]   = useState<any[]>([]);
   const [items, setItems]       = useState<any[]>([]);
   const [shades, setShades]     = useState<any[]>([]);
+  const [qualities, setQualities] = useState<any[]>([]);
   const [loading, setLoading]   = useState(true);
   const [modal, setModal]       = useState(false);
   const [editing, setEditing]   = useState<Order | null>(null);
@@ -37,8 +38,8 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
-    Promise.all([apiFetch('/clients'), apiFetch('/masters/items'), apiFetch('/masters/shades')])
-      .then(([c, i, s]) => { setClients(c); setItems(i); setShades(s); })
+    Promise.all([apiFetch('/clients'), apiFetch('/masters/items'), apiFetch('/masters/shades'), apiFetch('/qualities')])
+      .then(([c, i, s, q]) => { setClients(c); setItems(i); setShades(s); setQualities(q); })
       .catch(e => toast(e.message, 'error'));
     load();
   }, []);
@@ -123,7 +124,7 @@ export default function OrdersPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(o); setForm({ client_id: String(o.clients ? (o as any).client_id : ''), po_number: o.po_number || '', item_id: String((o as any).item_id || ''), shade_id: String((o as any).shade_id || ''), qty_kg: String(o.qty_kg || ''), rate: String(o.rate || ''), delivery_date: o.delivery_date || '', priority: o.priority }); setModal(true); }}>Edit</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(o); setForm({ client_id: String((o as any).client_id || ''), quality_id: String((o as any).quality_id || ''), po_number: o.po_number || '', item_id: String((o as any).item_id || ''), shade_id: String((o as any).shade_id || ''), qty_kg: String(o.qty_kg || ''), rate: String(o.rate || ''), delivery_date: o.delivery_date || '', priority: o.priority }); setModal(true); }}>Edit</button>
                         <button className="btn btn-danger btn-sm" onClick={() => setDelId(o.id)}>Delete</button>
                       </div>
                     </td>
@@ -144,11 +145,14 @@ export default function OrdersPage() {
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Client *</label>
-              <select className="form-select" value={form.client_id} onChange={f('client_id')}>
-                <option value="">Select client…</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableDropdown options={clients.map(c => ({ label: c.name, value: c.id }))} value={form.client_id} onChange={v => setForm(p => ({ ...p, client_id: String(v) }))} placeholder="Search client…" />
             </div>
+            <div className="form-group">
+              <label className="form-label">Quality</label>
+              <SearchableDropdown options={qualities.map(q => ({ label: q.name, value: q.id }))} value={form.quality_id} onChange={v => setForm(p => ({ ...p, quality_id: String(v) }))} placeholder="Search quality…" />
+            </div>
+          </div>
+          <div className="form-row">
             <div className="form-group"><label className="form-label">PO Number</label><input className="form-input" value={form.po_number} onChange={f('po_number')} placeholder="e.g. PO-2026-001" /></div>
           </div>
           <div className="form-row">

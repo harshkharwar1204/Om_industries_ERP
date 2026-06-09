@@ -31,3 +31,12 @@ out/
 *.db
 *.db-shm
 *.db-wal
+
+# Env (secrets — never commit)
+.env
+.env.local
+.env*.local
+
+# Build artifacts / prototype
+tsconfig.tsbuildinfo
+auth-control-center (1)/

@@ -25,13 +25,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     requireAdmin(req);
-    const { client_id, po_number, item_id, shade_id, qty_kg, rate, delivery_date, priority } = await req.json();
+    const { client_id, quality_id, po_number, item_id, shade_id, qty_kg, rate, delivery_date, priority } = await req.json();
     if (!client_id) return NextResponse.json({ error: 'Client required' }, { status: 400 });
 
     const { data, error } = await supabase
       .from('orders')
       .insert([{
         client_id:     Number(client_id),
+        quality_id:    quality_id ? Number(quality_id) : null,
         po_number:     po_number?.trim() || null,
         item_id:       item_id ? Number(item_id) : null,
         shade_id:      shade_id ? Number(shade_id) : null,

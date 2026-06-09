@@ -87,7 +87,7 @@ export default function WorkerFinancePage() {
 
   return (
     <div className="page-enter">
-      <PageHeader title="Worker Finance" subtitle={`${activeLoans.length} active loans · ₹${totalOutstanding.toLocaleString('en-IN')} outstanding`}>
+      <PageHeader title="Worker Finance" subtitle={`${activeLoans.length} active loans · ₹${totalOutstanding.toLocaleString('en-IN')} outstanding`} icon="banknote" iconColor="var(--warning)">
         {tab === 'loans' && (
           <button className="btn btn-primary" onClick={() => { setForm(BLANK_LOAN); setLoanModal(true); }}>
             <Icon name="plus" size={16} /> New Loan

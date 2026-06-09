@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { PageHeader, Modal, ConfirmDialog, StatusBadge, useToast, Icon } from '@/components/ui';
 
-interface Worker { id: number; name: string; phone: string; role: string; department: string | null; is_active: boolean; }
-const BLANK = { name: '', phone: '', email: '', role: 'hanks_worker', department: 'hanks', pin: '' };
+interface Worker { id: number; name: string; phone: string; role: string; department: string | null; is_active: boolean; daily_rate: number | null; }
+const BLANK = { name: '', phone: '', email: '', role: 'hanks_worker', department: 'hanks', pin: '', daily_rate: '' };
 
 export default function WorkersPage() {
   const [workers, setWorkers]   = useState<Worker[]>([]);
@@ -21,7 +21,7 @@ export default function WorkersPage() {
   const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(p => ({ ...p, [k]: e.target.value }));
 
   const openAdd  = () => { setEditing(null); setForm(BLANK); setModal(true); };
-  const openEdit = (w: Worker) => { setEditing(w); setForm({ name: w.name, phone: w.phone, email: (w as any).email || '', role: w.role, department: w.department || 'hanks', pin: '' }); setModal(true); };
+  const openEdit = (w: Worker) => { setEditing(w); setForm({ name: w.name, phone: w.phone, email: (w as any).email || '', role: w.role, department: w.department || 'hanks', pin: '', daily_rate: w.daily_rate ? String(w.daily_rate) : '' }); setModal(true); };
 
   const save = async () => {
     if (!form.name) { toast('Name required', 'error'); return; }
@@ -66,7 +66,7 @@ export default function WorkersPage() {
         ) : (
           <div className="table-wrap">
             <table className="data-table">
-              <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Dept</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Dept</th><th>Daily Rate</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
                 {workers.map(w => (
                   <tr key={w.id} style={!w.is_active ? { opacity: 0.55 } : {}}>
@@ -81,15 +81,27 @@ export default function WorkersPage() {
                     <td className="font-mono text-sm">{w.phone}</td>
                     <td>{w.role.replace('_', ' ')}</td>
                     <td>{w.department || '—'}</td>
-                    <td><StatusBadge status={w.is_active ? 'active' : 'inactive'} /></td>
+                    <td style={{ fontFamily: 'var(--font-heading)', fontSize: 13 }}>
+                      {w.daily_rate ? `₹${w.daily_rate}/day` : <span className="text-secondary">—</span>}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <StatusBadge status={w.is_active ? 'active' : 'inactive'} />
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => toggle(w.id)}
+                          style={{ gap: 4, color: w.is_active ? 'var(--danger)' : 'var(--success)' }}
+                        >
+                          <Icon name={w.is_active ? 'x-circle' : 'check-circle'} size={14} />
+                          {w.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </div>
+                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-secondary btn-sm" onClick={() => openEdit(w)}>Edit</button>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setPinReset({ id: w.id, pin: '' })} title="Reset PIN">
-                          <Icon name="refresh-cw" size={14} />
-                        </button>
-                        <button className="btn btn-ghost btn-sm" onClick={() => toggle(w.id)} title={w.is_active ? 'Deactivate' : 'Activate'}>
-                          <Icon name={w.is_active ? 'x-circle' : 'check-circle'} size={14} color={w.is_active ? 'var(--danger)' : 'var(--success)'} />
+                        <button className="btn btn-ghost btn-sm" onClick={() => setPinReset({ id: w.id, pin: '' })} style={{ gap: 4 }}>
+                          <Icon name="refresh-cw" size={14} /> Change PIN
                         </button>
                       </div>
                     </td>
@@ -128,6 +140,10 @@ export default function WorkersPage() {
               <option value="coning">Coning</option>
               <option value="dyeing">Dyeing</option>
             </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Daily Rate (₹/day) <span className="text-secondary text-sm">— for attendance-based payroll</span></label>
+            <input className="form-input" type="number" step="1" min="0" value={form.daily_rate} onChange={f('daily_rate')} placeholder="e.g. 350" inputMode="numeric" />
           </div>
           {!editing && (
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>

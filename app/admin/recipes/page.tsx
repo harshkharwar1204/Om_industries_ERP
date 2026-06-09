@@ -55,10 +55,10 @@ export default function RecipesPage() {
   );
 
   return (
-    <div className="page-enter" style={{ display: 'flex', gap: 20, height: 'calc(100vh - 112px)', overflow: 'hidden' }}>
+    <div className="page-enter recipes-split" style={{ display: 'flex', gap: 20, height: 'calc(100vh - 112px)', overflow: 'hidden' }}>
 
       {/* Left: recipe log */}
-      <div className="card" style={{ width: 290, flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="card recipes-list" style={{ width: 290, flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <h3 style={{ marginBottom: 12, fontSize: 15 }}>Saved Recipes <span className="badge badge-info" style={{ marginLeft: 6 }}>{recipes.length}</span></h3>
           <div style={{ position: 'relative' }}>
@@ -100,7 +100,7 @@ export default function RecipesPage() {
       </div>
 
       {/* Right: editor */}
-      <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="card recipes-editor" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <PageHeader title={(editing as any).id ? 'Edit Recipe' : 'New Recipe'}>
             <button className="btn btn-ghost btn-sm" onClick={() => setEditing(BLANK)}>Clear</button>

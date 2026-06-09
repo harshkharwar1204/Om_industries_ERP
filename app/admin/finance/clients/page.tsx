@@ -85,7 +85,7 @@ export default function ClientFinancePage() {
 
   return (
     <div className="page-enter">
-      <PageHeader title="Client Finance" subtitle={`${summary.length} clients · ₹${totalOutstanding.toLocaleString('en-IN')} outstanding`} />
+      <PageHeader title="Client Finance" subtitle={`${summary.length} clients · ₹${totalOutstanding.toLocaleString('en-IN')} outstanding`} icon="wallet" iconColor="var(--danger)" />
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid var(--border)' }}>
         {(['ledger', 'collections', 'adjustments'] as Tab[]).map(t => (

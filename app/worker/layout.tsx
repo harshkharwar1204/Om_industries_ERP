@@ -37,7 +37,7 @@ export default function WorkerLayout({ children }: { children: React.ReactNode }
     <div style={{
       display: 'flex', flexDirection: 'column',
       minHeight: '100dvh', background: 'var(--bg)',
-      paddingBottom: 72,
+      paddingBottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
     }}>
       {/* Header */}
       <header style={{
@@ -86,6 +86,7 @@ export default function WorkerLayout({ children }: { children: React.ReactNode }
         background: 'var(--surface)', borderTop: '1px solid var(--border)',
         display: 'flex', zIndex: 50,
         boxShadow: '0 -4px 12px rgba(0,0,0,0.06)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}>
         {NAV.map(n => {
           const active = pathname === n.href;

@@ -25,6 +25,7 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'stock',    label: 'Stock Inward', icon: 'package-plus',   href: '/admin/stock-inward' },
       { id: 'orders',   label: 'Orders',       icon: 'clipboard-list', href: '/admin/orders' },
       { id: 'dispatch', label: 'Dispatch',     icon: 'truck',          href: '/admin/dispatch' },
+      { id: 'challans', label: 'Delivery Challans', icon: 'file-text',  href: '/admin/challans' },
     ],
   },
   {
@@ -44,7 +45,8 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'qualities', label: 'Qualities', icon: 'layers',  href: '/admin/masters/qualities' },
       { id: 'machines',  label: 'Machines',  icon: 'cpu',     href: '/admin/masters/machines' },
       { id: 'shades',    label: 'Shades',    icon: 'palette', href: '/admin/masters/shades' },
-      { id: 'items',     label: 'Items',     icon: 'tag',     href: '/admin/masters/items' },
+      { id: 'items',     label: 'Items',     icon: 'tag',          href: '/admin/masters/items' },
+      { id: 'rates',     label: 'Rate Master', icon: 'indian-rupee', href: '/admin/masters/rates' },
     ],
   },
   {
@@ -52,16 +54,24 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'attendance', label: 'Attendance',    icon: 'calendar-check', href: '/admin/attendance' },
       { id: 'reports',    label: 'Reports',       icon: 'bar-chart-3',    href: '/admin/reports' },
-      { id: 'recipes',    label: 'Color Recipes', icon: 'flask-conical',  href: '/admin/recipes' },
+      { id: 'recipes',    label: 'Color Recipes',  icon: 'flask-conical',   href: '/admin/recipes' },
+      { id: 'comms',      label: 'Communications', icon: 'message-circle',  href: '/admin/communications' },
+      { id: 'chemicals',  label: 'Chemicals',      icon: 'flask-conical',   href: '/admin/masters/chemicals' },
+      { id: 'warehouses', label: 'Warehouses',     icon: 'warehouse',       href: '/admin/warehouses' },
+      { id: 'settings',   label: 'Settings',       icon: 'settings',        href: '/admin/settings' },
     ],
   },
 ];
 
-const ALL_NAV    = NAV_SECTIONS.flatMap(s => s.items);
-const BOTTOM_NAV = [ALL_NAV[0], ALL_NAV[1], ALL_NAV[2], ALL_NAV[3], ALL_NAV[12]];
+const ALL_NAV = NAV_SECTIONS.flatMap(s => s.items);
+const SEARCH_INDEX = NAV_SECTIONS.flatMap(s => s.items.map(i => ({ ...i, section: s.label })));
+// Bottom nav: most-used on mobile — resolved by id so nav edits don't shift it.
+const byId = (id: string) => ALL_NAV.find(n => n.id === id)!;
+const BOTTOM_NAV_LINKS = [byId('dashboard'), byId('hanks'), byId('attendance'), byId('dispatch')];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, loading } = useAuth();
@@ -84,7 +94,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null;
   }
 
-  const activeId = ALL_NAV.find(n => pathname?.startsWith(n.href))?.id ?? 'dashboard';
+  const activeItem = ALL_NAV.find(n => pathname?.startsWith(n.href));
+  const activeId = activeItem?.id ?? 'dashboard';
 
   const handleLogout = () => {
     logout();
@@ -92,6 +103,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const initials = user.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+
+  const q = searchQ.trim().toLowerCase();
+  const searchResults = q
+    ? SEARCH_INDEX.filter(i => i.label.toLowerCase().includes(q) || i.section.toLowerCase().includes(q)).slice(0, 8)
+    : [];
+  const go = (href: string) => { setSearchQ(''); router.push(href); };
 
   return (
     <div className="app-shell">
@@ -175,15 +192,40 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <Icon name="menu" size={22} />
           </button>
+          <span className="topbar-page-title">{activeItem?.label ?? 'Dashboard'}</span>
           <div className="topbar-search">
             <Icon name="search" size={16} color="var(--text-secondary)" />
-            <input placeholder="Search anything…" aria-label="Search" />
+            <input
+              placeholder="Search pages…"
+              aria-label="Search"
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && searchResults[0]) go(searchResults[0].href);
+                if (e.key === 'Escape') setSearchQ('');
+              }}
+            />
+            {q && (
+              <div className="search-results">
+                {searchResults.length === 0 ? (
+                  <div className="search-empty">No pages match “{searchQ}”</div>
+                ) : searchResults.map(r => (
+                  <button
+                    key={r.id}
+                    className="search-result"
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => go(r.href)}
+                  >
+                    <Icon name={r.icon} size={16} className="nav-icon" />
+                    <span className="search-result-label">{r.label}</span>
+                    <span className="search-result-section">{r.section}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="topbar-right">
-          <button className="topbar-btn" aria-label="Notifications">
-            <Icon name="bell" size={20} />
-          </button>
           <button
             className="topbar-btn"
             onClick={handleLogout}
@@ -211,7 +253,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Bottom nav (mobile) */}
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
-          {BOTTOM_NAV.map(item => (
+          {BOTTOM_NAV_LINKS.map(item => (
             <Link
               key={item.id}
               href={item.href}
@@ -221,6 +263,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span>{item.label.split(' ')[0]}</span>
             </Link>
           ))}
+          <button
+            className="bottom-nav-item"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+          >
+            <Icon name="menu" size={22} />
+            <span>More</span>
+          </button>
         </div>
       </nav>
     </div>

@@ -68,7 +68,7 @@ export default function ReadyStockPage() {
 
   return (
     <div className="page-enter">
-      <PageHeader title="Ready Stock" subtitle="Finished goods warehouse">
+      <PageHeader title="Ready Stock" subtitle="Finished goods warehouse" icon="warehouse" iconColor="var(--accent)">
         <button className="btn btn-primary" onClick={() => { setForm(BLANK); setModal(true); }}>
           <Icon name="plus" size={16} /> Add Entry
         </button>

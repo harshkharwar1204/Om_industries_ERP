@@ -1,37 +1,48 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { useToast, Icon } from '@/components/ui';
 
 interface Payslip {
+  source: 'saved' | 'computed';
   month: number; year: number;
-  approved_entries: number; total_entries: number;
-  total_kg: number; gross_wages: number;
-  total_advances: number; net_wages: number;
+  hanks_kg: number; hanks_wage: number;
+  coning_kg: number; coning_wage: number;
+  dyeing_wage: number;
+  present_days: number; daily_rate: number; attendance_wage: number;
+  gross_wage: number;
+  advance_deduction: number; loan_deduction: number; bonus: number;
+  net_wage: number;
+  status: string; payment_mode: string | null; payment_date: string | null;
 }
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-function Row({ label, value, color, large }: { label: string; value: string; color?: string; large?: boolean }) {
+function Row({ label, value, sub, color, bold }: { label: string; value: string; sub?: string; color?: string; bold?: boolean }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <span style={{ fontSize: large ? 15 : 14, fontWeight: large ? 700 : 500, color: 'var(--text-secondary)' }}>{label}</span>
-      <span style={{ fontSize: large ? 22 : 17, fontFamily: 'var(--font-heading)', fontWeight: 700, color: color || 'var(--text)' }}>{value}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div>
+        <span style={{ fontSize: 14, fontWeight: bold ? 600 : 400, color: 'var(--text-secondary)' }}>{label}</span>
+        {sub && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>{sub}</div>}
+      </div>
+      <span style={{ fontSize: bold ? 18 : 15, fontFamily: 'var(--font-heading)', fontWeight: 700, color: color || 'var(--text)' }}>{value}</span>
     </div>
   );
 }
 
 export default function WorkerPayslipPage() {
   const now = new Date();
-  const [month, setMonth]   = useState(String(now.getMonth() + 1));
-  const [year,  setYear]    = useState(String(now.getFullYear()));
-  const [slip,  setSlip]    = useState<Payslip | null>(null);
+  const { user } = useAuth();
+  const [month, setMonth] = useState(String(now.getMonth() + 1));
+  const [year,  setYear]  = useState(String(now.getFullYear()));
+  const [slip,  setSlip]  = useState<Payslip | null>(null);
   const [loading, setLoading] = useState(false);
   const toast = useToast();
 
   const load = () => {
     setLoading(true); setSlip(null);
-    apiFetch(`/payroll/hanks/my?month=${month}&year=${year}`)
+    apiFetch(`/payroll/my?month=${month}&year=${year}`)
       .then(setSlip).catch(e => toast(e.message, 'error')).finally(() => setLoading(false));
   };
 
@@ -41,7 +52,10 @@ export default function WorkerPayslipPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-      <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 20 }}>My Payslip</h2>
+      <div>
+        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 20, marginBottom: 2 }}>My Payslip</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{user?.name}</p>
+      </div>
 
       <div className="card">
         <div className="card-body">
@@ -58,36 +72,63 @@ export default function WorkerPayslipPage() {
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
-            <button className="btn btn-primary" onClick={load} disabled={loading} style={{ whiteSpace: 'nowrap' }}>
-              {loading
-                ? <div className="loading-spinner loading-spinner-sm" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} />
-                : <Icon name="search" size={16} />}
-              View
+            <button className="btn btn-primary" onClick={load} disabled={loading}>
+              {loading ? <div className="loading-spinner loading-spinner-sm" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} /> : <Icon name="search" size={16} />}
             </button>
           </div>
         </div>
       </div>
 
-      {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="loading-spinner" /></div>
-      )}
+      {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="loading-spinner" /></div>}
 
       {!loading && slip && (
-        <div className="card" style={{ borderTop: '3px solid var(--accent)' }}>
-          <div className="card-body" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 16 }}>
-              {MONTHS[slip.month - 1]} {slip.year}
+        <div className="card" style={{ borderTop: `3px solid ${slip.status === 'paid' ? 'var(--success)' : 'var(--accent)'}` }}>
+          {/* Header */}
+          <div className="card-body" style={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 16 }}>{MONTHS[slip.month - 1]} {slip.year}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                {slip.source === 'saved' ? 'Admin-confirmed payslip' : 'Estimated (not yet finalized by admin)'}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
-              {slip.approved_entries} approved of {slip.total_entries} entries
-            </div>
+            {slip.status === 'paid' && (
+              <div style={{ textAlign: 'right' }}>
+                <span className="badge badge-approved">Paid</span>
+                {slip.payment_mode && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, textTransform: 'capitalize' }}>{slip.payment_mode}{slip.payment_date ? ` · ${new Date(slip.payment_date).toLocaleDateString('en-IN')}` : ''}</div>}
+              </div>
+            )}
           </div>
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Row label="Total Weight"      value={`${slip.total_kg} kg`} />
-            <Row label="Gross Earnings"    value={`₹${slip.gross_wages.toLocaleString('en-IN')}`}      color="var(--success)" />
-            <Row label="Advances Deducted" value={`−₹${slip.total_advances.toLocaleString('en-IN')}`} color="var(--danger)" />
-            <div style={{ height: 1, background: 'var(--border)' }} />
-            <Row label="Net Payable"       value={`₹${slip.net_wages.toLocaleString('en-IN')}`}       color="var(--accent)" large />
+
+          {/* Earnings breakdown */}
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12, borderBottom: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Earnings</div>
+            {slip.hanks_wage > 0 && <Row label="Hanks Production" sub={`${slip.hanks_kg} kg`} value={`₹${slip.hanks_wage.toLocaleString('en-IN')}`} color="var(--success)" />}
+            {slip.coning_wage > 0 && <Row label="Coning Production" sub={`${slip.coning_kg} kg`} value={`₹${slip.coning_wage.toFixed(0)}`} color="var(--success)" />}
+            {slip.dyeing_wage > 0 && <Row label="Dyeing" value={`₹${slip.dyeing_wage}`} color="var(--success)" />}
+            {slip.attendance_wage > 0 && <Row label="Attendance Wage" sub={`${slip.present_days} days × ₹${slip.daily_rate}/day`} value={`₹${slip.attendance_wage.toFixed(0)}`} color="var(--success)" />}
+            {slip.bonus > 0 && <Row label="Bonus" value={`₹${slip.bonus}`} color="var(--success)" />}
+            {(slip.hanks_wage + slip.coning_wage + slip.dyeing_wage + slip.attendance_wage + slip.bonus) === 0 && (
+              <div style={{ color: 'var(--text-secondary)', fontSize: 13, textAlign: 'center', padding: '8px 0' }}>No approved entries this month</div>
+            )}
+          </div>
+
+          {/* Deductions */}
+          {(slip.advance_deduction + slip.loan_deduction) > 0 && (
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12, borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Deductions</div>
+              {slip.advance_deduction > 0 && <Row label="Salary Advances" value={`−₹${slip.advance_deduction.toLocaleString('en-IN')}`} color="var(--danger)" />}
+              {slip.loan_deduction > 0 && <Row label="Loan Instalment" value={`−₹${slip.loan_deduction.toLocaleString('en-IN')}`} color="var(--danger)" />}
+            </div>
+          )}
+
+          {/* Net */}
+          <div className="card-body" style={{ background: slip.status === 'paid' ? 'var(--success-light)' : 'var(--accent-light)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Net Payable</span>
+              <span style={{ fontSize: 28, fontFamily: 'var(--font-heading)', fontWeight: 700, color: slip.status === 'paid' ? 'var(--success)' : 'var(--accent)' }}>
+                ₹{slip.net_wage.toLocaleString('en-IN')}
+              </span>
+            </div>
           </div>
         </div>
       )}

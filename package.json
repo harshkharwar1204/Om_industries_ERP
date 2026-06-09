@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.105.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
@@ -20,14 +21,17 @@
     "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.3",
     "next": "^14.2.35",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.15.1"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",
+    "playwright": "^1.60.0",
     "typescript": "^6.0.3"
   }
 }

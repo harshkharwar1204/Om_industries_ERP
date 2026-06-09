@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     requireAdmin(req);
     const { data, error } = await supabase
       .from('recipes')
-      .select('*, shades(id, name, ingredients(*))')
+      .select('*, shades(id, name, ingredients(id, color_name, quantity, unit, quantity_liters))')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return NextResponse.json(
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
         if (Array.isArray(shade.ingredients) && shade.ingredients.length > 0) {
           const ingredients = shade.ingredients
             .filter((i: any) => i.color && i.quantity)
-            .map((i: any) => ({ shade_id: shadeRow.id, color_name: i.color, quantity: Number(i.quantity), unit: i.unit || 'g' }));
+            .map((i: any) => ({ shade_id: shadeRow.id, color_name: i.color, quantity: Number(i.quantity), quantity_liters: Number(i.quantity), unit: i.unit || 'g' }));
           if (ingredients.length > 0) {
             const { error: iErr } = await supabase.from('ingredients').insert(ingredients);
             if (iErr) throw iErr;

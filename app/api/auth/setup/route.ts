@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Provide admins array with name, phone, pin' }, { status: 400 });
     }
 
-    const results = [];
+    const results: any[] = [];
     for (const admin of admins) {
       if (!admin.name || !admin.phone || !admin.pin) continue;
       const pin_hash = await bcrypt.hash(String(admin.pin), 10);

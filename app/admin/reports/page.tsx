@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { PageHeader, useToast, Icon } from '@/components/ui';
 
-type ReportType = 'production' | 'stock' | 'dispatch' | 'finance' | 'worker-performance' | 'party-ledger';
+type ReportType = 'production' | 'stock' | 'dispatch' | 'finance' | 'worker-performance' | 'party-ledger' | 'payroll';
 
 const LABELS: Record<ReportType, string> = {
   production: 'Production',
@@ -13,6 +13,7 @@ const LABELS: Record<ReportType, string> = {
   finance: 'Financial Summary',
   'worker-performance': 'Worker Performance',
   'party-ledger': 'Party Ledger',
+  payroll: 'Payroll',
 };
 
 function exportCSV(rows: any[], filename: string) {
@@ -145,7 +146,7 @@ export default function ReportsPage() {
 
   return (
     <div className="page-enter">
-      <PageHeader title="Reports" subtitle="Generate and export production, finance & stock reports" />
+      <PageHeader title="Reports" subtitle="Generate and export production, finance & stock reports" icon="bar-chart-3" iconColor="var(--primary)" />
 
       <div style={{ display: 'flex', gap: 2, marginBottom: 20, flexWrap: 'wrap', borderBottom: '2px solid var(--border)' }}>
         {(Object.keys(LABELS) as ReportType[]).map(t => (

@@ -7,7 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     requireAdmin(req);
     const { data, error } = await supabase
       .from('recipes')
-      .select('*, shades(*, ingredients(*))')
+      .select('*, shades(id, name, recipe_id, ingredients(id, color_name, quantity, unit, quantity_liters))')
       .eq('id', params.id).single();
     if (error) throw error;
     return NextResponse.json(data);
@@ -42,7 +42,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         if (sErr) throw sErr;
         const ingredients = (shade.ingredients ?? [])
           .filter((i: any) => i.color && i.quantity)
-          .map((i: any) => ({ shade_id: shadeRow.id, color_name: i.color, quantity: Number(i.quantity), unit: i.unit || 'g' }));
+          .map((i: any) => ({ shade_id: shadeRow.id, color_name: i.color, quantity: Number(i.quantity), quantity_liters: Number(i.quantity), unit: i.unit || 'g' }));
         if (ingredients.length > 0) {
           await supabase.from('ingredients').insert(ingredients);
         }

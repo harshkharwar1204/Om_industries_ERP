@@ -103,20 +103,20 @@ export default function HanksPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Date</th><th>Worker</th><th>Client</th><th>Quality</th>
-                  <th>Weight</th><th>Rate</th><th>Earned</th><th>Status</th><th>Actions</th>
+                  <th className="hide-mobile">Date</th><th>Worker</th><th className="hide-mobile">Client</th><th className="hide-mobile">Quality</th>
+                  <th>Weight</th><th className="hide-mobile">Rate</th><th className="hide-mobile">Earned</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map(e => (
                   <tr key={e.id}>
-                    <td className="text-sm">{new Date(e.date).toLocaleDateString('en-IN')}</td>
+                    <td className="text-sm hide-mobile">{new Date(e.date).toLocaleDateString('en-IN')}</td>
                     <td><strong>{e.erp_users?.name}</strong></td>
-                    <td>{e.clients?.name}</td>
-                    <td>{e.qualities?.name}</td>
+                    <td className="hide-mobile">{e.clients?.name}</td>
+                    <td className="hide-mobile">{e.qualities?.name}</td>
                     <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 600 }}>{e.weight_kg} kg</td>
-                    <td>{e.rate_per_kg ? `₹${e.rate_per_kg}` : '—'}</td>
-                    <td style={{ color: e.total_earned ? 'var(--success)' : undefined, fontWeight: e.total_earned ? 600 : 400 }}>
+                    <td className="hide-mobile">{e.rate_per_kg ? `₹${e.rate_per_kg}` : '—'}</td>
+                    <td className="hide-mobile" style={{ color: e.total_earned ? 'var(--success)' : undefined, fontWeight: e.total_earned ? 600 : 400 }}>
                       {e.total_earned ? `₹${e.total_earned}` : '—'}
                     </td>
                     <td><StatusBadge status={e.status} /></td>

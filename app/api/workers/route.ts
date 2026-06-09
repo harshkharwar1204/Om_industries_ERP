@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const dept = req.nextUrl.searchParams.get('department');
     let query = supabase
       .from('erp_users')
-      .select('id, name, phone, email, role, department, is_active, created_at')
+      .select('id, name, phone, email, role, department, is_active, daily_rate, created_at')
       .neq('role', 'admin')
       .order('name');
     if (dept) query = query.eq('department', dept);
