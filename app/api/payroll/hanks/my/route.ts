@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth';
+import { monthRange } from '@/lib/dates';
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
     if (!month || !year) return NextResponse.json({ error: 'month and year required' }, { status: 400 });
 
     const start = `${year}-${String(month).padStart(2, '0')}-01`;
-    const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const end   = monthRange(month!, year!).end;
 
     const [prodRes, advRes] = await Promise.all([
       supabase.from('hanks_production')

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin, requireAuth } from '@/lib/auth';
+import { monthRange } from '@/lib/dates';
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,8 +17,7 @@ export async function GET(req: NextRequest) {
 
     if (status) query = query.eq('status', status);
     if (month && year) {
-      const start = `${year}-${String(month).padStart(2, '0')}-01`;
-      const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+      const { start, end } = monthRange(month, year);
       query = query.gte('date', start).lte('date', end);
     }
 

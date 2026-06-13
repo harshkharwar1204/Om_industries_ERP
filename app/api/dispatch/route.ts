@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
-
-const FACTORY_STATE = '24'; // Gujarat
-
-function calcGst(taxableValue: number, gstRate: number, clientStateCode: string) {
-  const tax = Math.round((taxableValue * gstRate / 100) * 100) / 100;
-  const intraState = (clientStateCode || '24') === FACTORY_STATE;
-  return intraState
-    ? { cgst: tax / 2, sgst: tax / 2, igst: 0, total_tax: tax }
-    : { cgst: 0, sgst: 0, igst: tax, total_tax: tax };
-}
+import { logAction } from '@/lib/audit';
+import { computeInvoice } from '@/lib/gst';
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,7 +21,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    requireAdmin(req);
+    const actor = requireAdmin(req);
     const body = await req.json();
     const { client_id, order_id, stock_id, qty_kg, rate, vehicle_no, lr_no, date,
             hsn_code, gst_rate, tax_inclusive } = body;
@@ -63,27 +55,15 @@ export async function POST(req: NextRequest) {
     const rateNum = Number(rate);
     const baseAmount = qtyNum * rateNum;
     const gstRateNum = Number(gst_rate) || 0;
-    const isUnregistered = client?.dealer_type === 'unregistered';
 
-    let taxableValue: number, cgst: number, sgst: number, igst: number, total_tax: number, grand_total: number;
-
-    if (!gstRateNum || isUnregistered) {
-      // No GST
-      taxableValue = baseAmount;
-      cgst = 0; sgst = 0; igst = 0; total_tax = 0;
-      grand_total = baseAmount;
-    } else if (tax_inclusive) {
-      // Back-calculate taxable from gross
-      taxableValue = Math.round((baseAmount / (1 + gstRateNum / 100)) * 100) / 100;
-      const gstAmounts = calcGst(taxableValue, gstRateNum, client?.state_code || '24');
-      cgst = gstAmounts.cgst; sgst = gstAmounts.sgst; igst = gstAmounts.igst; total_tax = gstAmounts.total_tax;
-      grand_total = baseAmount; // amount already includes tax
-    } else {
-      taxableValue = baseAmount;
-      const gstAmounts = calcGst(taxableValue, gstRateNum, client?.state_code || '24');
-      cgst = gstAmounts.cgst; sgst = gstAmounts.sgst; igst = gstAmounts.igst; total_tax = gstAmounts.total_tax;
-      grand_total = taxableValue + total_tax;
-    }
+    const inv = computeInvoice({
+      base: baseAmount,
+      gstRate: gstRateNum,
+      taxInclusive: !!tax_inclusive,
+      stateCode: client?.state_code || '24',
+      unregistered: client?.dealer_type === 'unregistered',
+    });
+    const { taxable_value: taxableValue, cgst, sgst, igst, total_tax, grand_total } = inv;
 
     const { data, error } = await supabase
       .from('dispatches')
@@ -130,6 +110,9 @@ export async function POST(req: NextRequest) {
       amount:       grand_total,
       reference_id: data.id,
     }]);
+
+    await logAction(actor, 'dispatch', 'dispatch', data.id,
+      `Invoice ${invoiceNo}: ${qtyNum}kg @ ₹${rateNum} → ₹${grand_total}`, { invoice_no: invoiceNo, qty_kg: qtyNum, grand_total, client_id: Number(client_id) });
 
     return NextResponse.json(data, { status: 201 });
   } catch (e: any) {

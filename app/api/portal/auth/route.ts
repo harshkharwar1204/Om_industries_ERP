@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import { supabase } from '@/lib/supabase';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '@/lib/auth';
@@ -21,8 +22,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Phone number not found or portal not enabled' }, { status: 401 });
     }
 
-    if (client.portal_passcode !== String(passcode).trim()) {
+    // Passcodes are stored bcrypt-hashed. Legacy plaintext values are compared
+    // directly and silently upgraded to a hash on first successful login.
+    const stored = String(client.portal_passcode ?? '');
+    const entered = String(passcode).trim();
+    const isHashed = stored.startsWith('$2');
+    const ok = isHashed ? await bcrypt.compare(entered, stored) : stored === entered;
+    if (!ok) {
       return NextResponse.json({ error: 'Invalid passcode' }, { status: 401 });
+    }
+    if (!isHashed) {
+      // lazy migrate plaintext -> hash
+      await supabase.from('clients').update({ portal_passcode: await bcrypt.hash(entered, 10) }).eq('id', client.id);
     }
 
     const token = jwt.sign({ clientId: client.id, type: 'portal' }, JWT_SECRET, { expiresIn: '7d' });

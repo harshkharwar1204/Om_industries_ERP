@@ -13,6 +13,19 @@ export async function consumePool(
   match: Record<string, number | string | null>,
   kg: number
 ): Promise<number> {
+  // Prefer the atomic, row-locked DB function (db/migrations/002_atomic_consume_pool.sql).
+  // It eliminates the read-then-write race below. Falls back to JS if not deployed.
+  const client_id = (match.client_id ?? null) as number | null;
+  const quality_id = (match.quality_id ?? null) as number | null;
+  if (client_id != null && !('shade_id' in match)) {
+    try {
+      const { data, error } = await supabase.rpc('consume_pool', {
+        p_table: table, p_client: client_id, p_quality: quality_id, p_kg: Number(kg),
+      });
+      if (!error && data != null) return Number(data);
+    } catch { /* function not deployed — use JS fallback */ }
+  }
+
   let remaining = Number(kg);
   let q = supabase.from(table).select('id, remaining_kg').gt('remaining_kg', 0);
   for (const [k, v] of Object.entries(match)) {

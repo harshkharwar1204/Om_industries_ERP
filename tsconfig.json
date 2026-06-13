@@ -41,6 +41,7 @@
     "auth-control-center",
     "auth-control-center (1)",
     "design-system",
-    "src"
+    "src",
+    "tests"
   ]
 }

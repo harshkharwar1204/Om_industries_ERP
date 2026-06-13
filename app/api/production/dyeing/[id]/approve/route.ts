@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
 import { addOrderProgress, bumpOrder } from '@/lib/transfer';
+import { logAction } from '@/lib/audit';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireRole(req, ['admin', 'dyeing_master']);
+    const actor = requireRole(req, ['admin', 'dyeing_master']);
     const body = await req.json().catch(() => ({}));
     const output_kg = body.output_kg;
     const chemicals: { name: string; qty: number }[] = Array.isArray(body.chemicals) ? body.chemicals : [];
@@ -69,6 +70,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Order fulfillment rollup (direct if order-linked, else by match).
     if (batch.order_id) await bumpOrder(batch.order_id, 'dyed_kg', dyedKg);
     else await addOrderProgress('dyed_kg', { client_id: batch.client_id, quality_id: batch.quality_id, shade_id: batch.shade_id }, dyedKg);
+
+    await logAction(actor, 'approve', 'dyeing_production', batch.id,
+      `Completed dyeing batch ${batch.batch_no} → ${dyedKg}kg dyed stock`, { batch_no: batch.batch_no, output_kg: dyedKg, chemicals });
 
     return NextResponse.json(data);
   } catch (e: any) {

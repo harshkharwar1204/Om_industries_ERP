@@ -53,10 +53,12 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'attendance', label: 'Attendance',    icon: 'calendar-check', href: '/admin/attendance' },
       { id: 'reports',    label: 'Reports',       icon: 'bar-chart-3',    href: '/admin/reports' },
+      { id: 'analytics',  label: 'Analytics',     icon: 'trending-up',    href: '/admin/analytics' },
       { id: 'recipes',    label: 'Color Recipes',  icon: 'flask-conical',   href: '/admin/recipes' },
       { id: 'comms',      label: 'Communications', icon: 'message-circle',  href: '/admin/communications' },
       { id: 'chemicals',  label: 'Chemicals',      icon: 'flask-conical',   href: '/admin/masters/chemicals' },
       { id: 'warehouses', label: 'Warehouses',     icon: 'warehouse',       href: '/admin/warehouses' },
+      { id: 'audit',      label: 'Audit Trail',    icon: 'history',         href: '/admin/audit' },
       { id: 'settings',   label: 'Settings',       icon: 'settings',        href: '/admin/settings' },
     ],
   },
@@ -96,8 +98,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   // Dyeing master = operational admin: blocked from accounts/finance/payroll/attendance/settings.
-  const MASTER_BLOCKED_IDS = ['finance-clients', 'chemicals'];
-  const MASTER_BLOCKED_PATHS = ['/admin/finance/clients', '/admin/masters/chemicals'];
+  const MASTER_BLOCKED_IDS = ['finance-clients', 'chemicals', 'audit', 'analytics'];
+  const MASTER_BLOCKED_PATHS = ['/admin/finance/clients', '/admin/masters/chemicals', '/admin/audit', '/admin/analytics'];
   if (isMaster && MASTER_BLOCKED_PATHS.some(p => pathname?.startsWith(p))) {
     router.replace('/admin/dashboard');
     return null;

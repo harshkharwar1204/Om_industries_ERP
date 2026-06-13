@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
+import { logAction } from '@/lib/audit';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req);
+    const actor = requireAdmin(req);
 
     const { data: batch, error: fErr } = await supabase
       .from('dyeing_production').select('*').eq('id', params.id).single();
@@ -32,6 +33,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { data, error } = await supabase
       .from('dyeing_production').update({ status: 'rejected' }).eq('id', params.id).select().single();
     if (error) throw error;
+    await logAction(actor, 'reject', 'dyeing_production', batch.id,
+      `Rejected dyeing batch ${batch.batch_no}${batch.grey_consumed ? ' (restored grey stock)' : ''}`, { batch_no: batch.batch_no, input_kg: batch.input_kg });
     return NextResponse.json(data);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });

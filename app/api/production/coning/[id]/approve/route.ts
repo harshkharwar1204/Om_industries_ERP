@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
 import { addOrderProgress, bumpOrder, consumePool } from '@/lib/transfer';
+import { logAction } from '@/lib/audit';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req);
+    const actor = requireAdmin(req);
 
     const { data: entry, error: fetchErr } = await supabase
       .from('coning_production')
@@ -84,6 +85,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Order fulfillment rollup (direct if order-linked, else by match). Completes order when coned >= qty.
     if (entry.order_id) await bumpOrder(entry.order_id, 'coned_kg', conedKg);
     else await addOrderProgress('coned_kg', { client_id: entry.client_id, quality_id: entry.quality_id, shade_id: entry.shade_id }, conedKg);
+
+    await logAction(actor, 'approve', 'coning_production', entry.id,
+      `Approved coning ${entry.cones_count} cones (${conedKg}kg) → ready stock`, { cones: entry.cones_count, output_kg: conedKg, rate, total_earned });
 
     return NextResponse.json(data);
   } catch (e: any) {

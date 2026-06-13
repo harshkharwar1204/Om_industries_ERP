@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireStrictAdmin } from '@/lib/auth';
+import { logAction } from '@/lib/audit';
+import { monthRange } from '@/lib/dates';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,7 +13,7 @@ export async function GET(req: NextRequest) {
 
     const m   = String(month).padStart(2, '0');
     const start = `${year}-${m}-01`;
-    const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const end   = monthRange(month!, year!).end;
 
     const [workers, hanks, coning, attendance, advances, loans, savedPayroll] = await Promise.all([
       supabase.from('erp_users').select('id, name, department, role, daily_rate, monthly_salary').neq('role', 'admin').order('name'),
@@ -105,14 +107,14 @@ export async function GET(req: NextRequest) {
 // Save/update payroll record for a worker-month
 export async function POST(req: NextRequest) {
   try {
-    requireStrictAdmin(req);
+    const actor = requireStrictAdmin(req);
     const { worker_id, month, year, dyeing_wage, bonus, notes } = await req.json();
     if (!worker_id || !month || !year) return NextResponse.json({ error: 'worker_id, month, year required' }, { status: 400 });
 
     // Re-compute everything fresh
     const m     = String(month).padStart(2, '0');
     const start = `${year}-${m}-01`;
-    const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const end   = monthRange(month!, year!).end;
 
     const [worker, hanks, coning, att, adv, loans] = await Promise.all([
       supabase.from('erp_users').select('daily_rate, monthly_salary, role').eq('id', worker_id).single(),
@@ -152,6 +154,10 @@ export async function POST(req: NextRequest) {
       .select().single();
 
     if (error) throw error;
+
+    await logAction(actor, 'payroll_save', 'payroll', `${worker_id}-${month}-${year}`,
+      `Saved payroll worker ${worker_id} ${month}/${year}: net ₹${net_wage}`, { worker_id, month, year, gross_wage, net_wage });
+
     return NextResponse.json(data, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: /required|denied|token|unauthor/i.test(e.message) ? 403 : 400 });

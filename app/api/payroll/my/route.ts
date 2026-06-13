@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth';
+import { monthRange } from '@/lib/dates';
 
 export async function GET(req: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
     // Fallback: compute from raw data (not yet saved by admin)
     const m     = String(month).padStart(2, '0');
     const start = `${year}-${m}-01`;
-    const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const end   = monthRange(month!, year!).end;
 
     const [workerRes, hanks, coning, att, adv, loans] = await Promise.all([
       supabase.from('erp_users').select('daily_rate').eq('id', user.id).single(),

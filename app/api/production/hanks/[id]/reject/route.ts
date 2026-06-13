@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
+import { logAction } from '@/lib/audit';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req);
+    const actor = requireAdmin(req);
 
     const { data: entry, error: fErr } = await supabase
       .from('hanks_production').select('*').eq('id', params.id).single();
@@ -47,6 +48,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { data, error } = await supabase
       .from('hanks_production').update({ status: 'rejected' }).eq('id', params.id).select().single();
     if (error) throw error;
+    await logAction(actor, 'reject', 'hanks_production', entry.id,
+      `Rejected hanks entry${entry.status === 'approved' ? ' (reversed grey stock)' : ''}`, { was: entry.status, weight_kg: entry.weight_kg });
     return NextResponse.json(data);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });

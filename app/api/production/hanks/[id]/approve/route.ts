@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
 import { addOrderProgress, bumpOrder } from '@/lib/transfer';
+import { logAction } from '@/lib/audit';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req);
+    const actor = requireAdmin(req);
 
     // Fetch entry + quality rate
     const { data: entry, error: fetchErr } = await supabase
@@ -68,6 +69,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Order fulfillment: count toward received weight (direct if order-linked, else by match).
     if (entry.order_id) await bumpOrder(entry.order_id, 'received_kg', producedKg);
     else await addOrderProgress('received_kg', { client_id: entry.client_id, quality_id: entry.quality_id }, producedKg);
+
+    await logAction(actor, 'approve', 'hanks_production', entry.id,
+      `Approved hanks ${producedKg}kg → grey stock`, { weight_kg: producedKg, rate, total_earned });
 
     return NextResponse.json(data);
   } catch (e: any) {

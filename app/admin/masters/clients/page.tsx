@@ -6,7 +6,7 @@ import { PageHeader, Modal, ConfirmDialog, useToast, Icon } from '@/components/u
 interface Client {
   id: number; name: string; address: string | null; phone: string | null;
   gstin: string | null; state_code: string | null; dealer_type: string | null;
-  portal_enabled: boolean; portal_passcode: string | null;
+  portal_enabled: boolean; portal_passcode?: string | null; has_passcode?: boolean;
 }
 
 const BLANK = { name: '', address: '', phone: '', gstin: '', state_code: '24', dealer_type: 'registered', portal_enabled: false, portal_passcode: '' };
@@ -30,7 +30,8 @@ export default function ClientsPage() {
 
   const openEdit = (c: Client) => {
     setEditing(c);
-    setForm({ name: c.name, address: c.address || '', phone: c.phone || '', gstin: c.gstin || '', state_code: c.state_code || '24', dealer_type: c.dealer_type || 'registered', portal_enabled: c.portal_enabled ?? false, portal_passcode: c.portal_passcode || '' });
+    // Passcode is never returned by the API (hashed/redacted); leave blank = keep existing.
+    setForm({ name: c.name, address: c.address || '', phone: c.phone || '', gstin: c.gstin || '', state_code: c.state_code || '24', dealer_type: c.dealer_type || 'registered', portal_enabled: c.portal_enabled ?? false, portal_passcode: '' });
     setModal(true);
   };
 
@@ -155,8 +156,8 @@ export default function ClientsPage() {
             {form.portal_enabled && (
               <div className="form-group">
                 <label className="form-label">Portal Passcode (4-6 digits)</label>
-                <input className="form-input" type="text" inputMode="numeric" value={form.portal_passcode} onChange={f('portal_passcode')} placeholder="e.g. 1234" maxLength={6} style={{ fontFamily: 'var(--font-heading)', letterSpacing: '0.1em' }} />
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Party logs in at <strong>/portal</strong> with their phone number + this passcode</div>
+                <input className="form-input" type="text" inputMode="numeric" value={form.portal_passcode} onChange={f('portal_passcode')} placeholder={editing?.has_passcode ? 'Leave blank to keep current' : 'e.g. 1234'} maxLength={6} style={{ fontFamily: 'var(--font-heading)', letterSpacing: '0.1em' }} />
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Stored encrypted. Party logs in at <strong>/portal</strong> with their phone number + this passcode</div>
               </div>
             )}
           </div>
