@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin, requireAuth } from '@/lib/auth';
+import { requireStrictAdmin, requireAuth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const status = req.nextUrl.searchParams.get('status');
     let query = supabase
       .from('worker_advances')

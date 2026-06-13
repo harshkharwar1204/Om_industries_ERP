@@ -26,7 +26,7 @@ export function SearchableDropdown({ options, value, onChange, placeholder = 'Se
     typeof o === 'string' ? { label: o, value: o } : o;
 
   const filtered = options.map(normalize).filter(o => o.label.toLowerCase().includes(query.toLowerCase()));
-  const selected = options.map(normalize).find(o => o.value === value);
+  const selected = options.map(normalize).find(o => String(o.value) === String(value));
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -70,8 +70,8 @@ export function SearchableDropdown({ options, value, onChange, placeholder = 'Se
                 onClick={() => { onChange(o.value); setOpen(false); setQuery(''); }}
                 style={{
                   padding: '10px 16px', cursor: 'pointer', fontSize: 14,
-                  background: o.value === value ? 'var(--accent-light)' : 'transparent',
-                  fontWeight: o.value === value ? 600 : 400,
+                  background: String(o.value) === String(value) ? 'var(--accent-light)' : 'transparent',
+                  fontWeight: String(o.value) === String(value) ? 600 : 400,
                   transition: 'background 100ms',
                 }}
                 onMouseEnter={e => { if (o.value !== value) (e.currentTarget as HTMLDivElement).style.background = 'var(--hover-bg)'; }}

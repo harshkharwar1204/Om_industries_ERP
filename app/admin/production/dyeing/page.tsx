@@ -13,7 +13,7 @@ interface Entry {
 }
 
 const BLANK = {
-  client_id: '', quality_id: '', recipe_id: '', recipe_shade_id: '', machine_id: '',
+  client_id: '', quality_id: '', recipe_id: '', recipe_shade_id: '', machine_id: '', order_id: '',
   input_kg: '', date: new Date().toISOString().split('T')[0],
 };
 
@@ -23,6 +23,7 @@ export default function DyeingPage() {
   const [qualities, setQualities] = useState<any[]>([]);
   const [recipes, setRecipes]     = useState<any[]>([]);
   const [machines, setMachines]   = useState<any[]>([]);
+  const [orders, setOrders]       = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [modal, setModal]         = useState(false);
   const [form, setForm]           = useState<any>(BLANK);
@@ -44,8 +45,8 @@ export default function DyeingPage() {
   };
 
   useEffect(() => {
-    Promise.all([apiFetch('/clients'), apiFetch('/qualities'), apiFetch('/recipes'), apiFetch('/masters/machines')])
-      .then(([c, q, r, m]) => { setClients(c); setQualities(q); setRecipes(r); setMachines(m); })
+    Promise.all([apiFetch('/clients'), apiFetch('/qualities'), apiFetch('/recipes'), apiFetch('/masters/machines'), apiFetch('/orders')])
+      .then(([c, q, r, m, o]) => { setClients(c); setQualities(q); setRecipes(r); setMachines(m); setOrders(Array.isArray(o) ? o : []); })
       .catch(e => toast(e.message, 'error'));
     load();
   }, []);
@@ -68,7 +69,7 @@ export default function DyeingPage() {
     setSaving(true);
     try {
       await apiFetch('/production/dyeing', { method: 'POST', body: JSON.stringify({
-        client_id: form.client_id, quality_id: form.quality_id,
+        client_id: form.client_id, quality_id: form.quality_id, order_id: form.order_id || null,
         shade_id: form.recipe_shade_id || null, recipe_id: form.recipe_id || null,
         machine_id: form.machine_id, input_kg: form.input_kg, date: form.date,
       }) });
@@ -199,6 +200,18 @@ export default function DyeingPage() {
           </button>
         </>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="form-group">
+            <label className="form-label">Order (dyeing queue)</label>
+            <select className="form-select" value={form.order_id}
+              onChange={e => {
+                const o = orders.find(x => String(x.id) === e.target.value);
+                setForm((p: any) => ({ ...p, order_id: e.target.value, client_id: o ? String(o.client_id ?? '') : p.client_id, quality_id: o ? String(o.quality_id ?? '') : p.quality_id }));
+              }}>
+              <option value="">Select order…</option>
+              {orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled' && Number(o.received_kg ?? 0) > Number(o.dyed_kg ?? 0))
+                .map(o => <option key={o.id} value={o.id}>{o.clients?.name ?? '—'} · {o.qualities?.name ?? ''} · ready to dye {Math.max(0, Number(o.received_kg ?? 0) - Number(o.dyed_kg ?? 0))}kg{o.po_number ? ` · ${o.po_number}` : ''}</option>)}
+            </select>
+          </div>
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Client / Party *</label>

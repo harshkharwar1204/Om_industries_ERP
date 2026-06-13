@@ -21,6 +21,22 @@ declare global {
 
 const BLANK_REG = { name: '', phone: '', role: '', department: '' };
 
+// Module-scope so it isn't recreated each render (which would remount inputs and break auto-advance).
+function PinRow({ value, refs, onChange, onKey }: { value: string[]; refs: React.RefObject<HTMLInputElement | null>[]; onChange: (i: number, v: string) => void; onKey: (i: number, e: React.KeyboardEvent) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+      {value.map((digit, i) => (
+        <input key={i} ref={refs[i]} type="password" inputMode="numeric" maxLength={1} value={digit}
+          onChange={e => onChange(i, e.target.value)} onKeyDown={e => onKey(i, e)}
+          style={{ width: 60, height: 60, textAlign: 'center', fontSize: 28, fontWeight: 700, border: `2px solid ${digit ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', background: digit ? 'var(--accent-light)' : 'var(--surface)', outline: 'none', color: 'var(--text)', fontFamily: 'var(--font-heading)', transition: 'border-color 150ms, background 150ms' }}
+          onFocus={e => { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.18)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
+          onBlur={e => { if (!digit) { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; } }}
+          autoComplete="off" />
+      ))}
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const [tab, setTab]         = useState<Tab>('phone');
   const [mode, setMode]       = useState<Mode>('login');
@@ -43,7 +59,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace(user.role === 'admin' ? '/admin/dashboard' : '/worker');
+      router.replace(['admin', 'dyeing_master'].includes(user.role) ? '/admin/dashboard' : '/worker');
     }
   }, [user, authLoading]);
 
@@ -72,7 +88,7 @@ export default function LoginPage() {
         router.replace('/onboarding'); return;
       }
       localStorage.setItem('erp_token', data.token);
-      window.location.href = data.user.role === 'admin' ? '/admin/dashboard' : '/worker';
+      window.location.href = ['admin', 'dyeing_master'].includes(data.user.role) ? '/admin/dashboard' : '/worker';
     } catch (e: any) { setError(e.message || 'Sign-in failed'); setLoading(false); }
   };
 
@@ -95,7 +111,7 @@ export default function LoginPage() {
     try {
       const u = await login(phone.trim(), pinStr);
       toast(`Welcome, ${u.name}!`);
-      router.replace(u.role === 'admin' ? '/admin/dashboard' : '/worker');
+      router.replace(['admin', 'dyeing_master'].includes(u.role) ? '/admin/dashboard' : '/worker');
     } catch (err: any) { setError(err.message || 'Login failed'); }
     finally { setLoading(false); }
   };
@@ -114,25 +130,12 @@ export default function LoginPage() {
       if (!res.ok) { setError(data.error || 'Registration failed'); return; }
       toast(`Account created! Welcome, ${data.user.name}`);
       localStorage.setItem('erp_token', data.token);
-      window.location.href = '/worker';
+      window.location.href = ['admin', 'dyeing_master'].includes(data.user.role) ? '/admin/dashboard' : '/worker';
     } catch (err: any) { setError(err.message || 'Registration failed'); }
     finally { setLoading(false); }
   };
 
   const switchMode = (m: Mode) => { setMode(m); setError(''); setPin(['','','','']); setRegPin(['','','','']); setPhone(''); setReg(BLANK_REG); };
-
-  const PinRow = ({ value, refs, onChange, onKey }: { value: string[]; refs: React.RefObject<HTMLInputElement | null>[]; onChange: (i: number, v: string) => void; onKey: (i: number, e: React.KeyboardEvent) => void }) => (
-    <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-      {value.map((digit, i) => (
-        <input key={i} ref={refs[i]} type="password" inputMode="numeric" maxLength={1} value={digit}
-          onChange={e => onChange(i, e.target.value)} onKeyDown={e => onKey(i, e)}
-          style={{ width: 60, height: 60, textAlign: 'center', fontSize: 28, fontWeight: 700, border: `2px solid ${digit ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', background: digit ? 'var(--accent-light)' : 'var(--surface)', outline: 'none', color: 'var(--text)', fontFamily: 'var(--font-heading)', transition: 'border-color 150ms, background 150ms' }}
-          onFocus={e => { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249,115,22,0.18)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
-          onBlur={e => { if (!digit) { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; } }}
-          autoComplete="off" />
-      ))}
-    </div>
-  );
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'var(--bg)', position: 'relative', overflow: 'hidden' }}>

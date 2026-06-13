@@ -1,11 +1,11 @@
 // app/api/loans/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const { data, error } = await supabase
       .from('worker_loans')
       .select('*, erp_users(name, department)')
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const { worker_id, loan_amount, hapta_amount } = await req.json();
     if (!worker_id || !loan_amount || !hapta_amount) {
       return NextResponse.json({ error: 'worker_id, loan_amount, hapta_amount required' }, { status: 400 });

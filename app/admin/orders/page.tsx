@@ -9,7 +9,13 @@ interface Order {
   clients?: { name: string }; shade_id?: number | null; items?: { name: string; unit: string };
 }
 
-const BLANK = { client_id: '', quality_id: '', po_number: '', item_id: '', shade_id: '', qty_kg: '', rate: '', delivery_date: '', priority: 'medium' };
+const BLANK = { client_id: '', quality_id: '', department: 'general', po_number: '', item_id: '', shade_id: '', qty_kg: '', rate: '', delivery_date: '', priority: 'medium' };
+const DEPARTMENTS = [
+  { v: 'general', label: 'General / All' },
+  { v: 'hanks',   label: 'Hanks · Unit 2' },
+  { v: 'dyeing',  label: 'Dyeing · Unit 1' },
+  { v: 'coning',  label: 'Coning' },
+];
 const PRIORITIES = ['low','medium','high','urgent'];
 const STATUSES   = ['pending','processing','completed','cancelled'];
 const PRI_COLORS: Record<string,string> = { low: 'var(--text-secondary)', medium: 'var(--info)', high: 'var(--warning)', urgent: 'var(--danger)' };
@@ -72,6 +78,7 @@ export default function OrdersPage() {
     catch (e: any) { toast(e.message, 'error'); }
   };
 
+
   return (
     <div className="page-enter">
       <PageHeader title="Orders" subtitle={`${orders.length} orders`}>
@@ -99,18 +106,27 @@ export default function OrdersPage() {
           <div className="table-wrap">
             <table className="data-table">
               <thead>
-                <tr><th>PO No.</th><th>Client</th><th>Item</th><th>Shade</th><th>Qty (kg)</th><th>Rate (₹)</th><th>Delivery</th><th>Priority</th><th>Status</th><th>Actions</th></tr>
+                <tr><th>PO No.</th><th>Client</th><th>Unit</th><th className="hide-mobile">Item</th><th className="hide-mobile">Shade</th><th>Qty (kg)</th><th className="hide-mobile">Rate (₹)</th><th className="hide-mobile">Delivery</th><th>Stages</th><th>Priority</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {orders.map(o => (
                   <tr key={o.id}>
                     <td className="font-mono text-sm">{o.po_number || `ORD-${String(o.id).padStart(4, '0')}`}</td>
                     <td><strong>{o.clients?.name}</strong></td>
-                    <td className="text-secondary text-sm">{o.items?.name || '—'}</td>
-                    <td className="text-secondary text-sm">{shades.find((s: any) => s.id === o.shade_id)?.name || '—'}</td>
+                    <td className="text-sm" style={{ textTransform: 'capitalize' }}>{((o as any).department || 'general').replace('_', ' ')}</td>
+                    <td className="text-secondary text-sm hide-mobile">{o.items?.name || '—'}</td>
+                    <td className="text-secondary text-sm hide-mobile">{shades.find((s: any) => s.id === o.shade_id)?.name || '—'}</td>
                     <td style={{ fontFamily: 'var(--font-heading)' }}>{o.qty_kg ? `${o.qty_kg} kg` : '—'}</td>
-                    <td style={{ fontFamily: 'var(--font-heading)' }}>{o.rate ? `₹${o.rate}` : '—'}</td>
-                    <td className="text-sm">{o.delivery_date ? new Date(o.delivery_date).toLocaleDateString('en-IN') : '—'}</td>
+                    <td style={{ fontFamily: 'var(--font-heading)' }} className="hide-mobile">{o.rate ? `₹${o.rate}` : '—'}</td>
+                    <td className="text-sm hide-mobile">{o.delivery_date ? new Date(o.delivery_date).toLocaleDateString('en-IN') : '—'}</td>
+                    <td style={{ fontSize: 11, whiteSpace: 'nowrap', fontFamily: 'var(--font-heading)' }}>
+                      {([['H','received_kg'],['D','dyed_kg'],['C','coned_kg']] as const).map(([lbl, key]) => {
+                        const v = Number((o as any)[key] ?? 0);
+                        const q = Number(o.qty_kg ?? 0);
+                        const full = q > 0 && v >= q;
+                        return <span key={lbl} title={key} style={{ marginRight: 7, color: full ? 'var(--success)' : v > 0 ? 'var(--warning)' : 'var(--border-dark)', fontWeight: 700 }}>{lbl}:{v}</span>;
+                      })}
+                    </td>
                     <td>
                       <span style={{ padding: '3px 10px', borderRadius: 9999, fontSize: 12, fontWeight: 700, background: PRI_BG[o.priority], color: PRI_COLORS[o.priority], textTransform: 'capitalize', ...(o.priority === 'urgent' ? { animation: 'pulse-urgent 1.5s infinite' } : {}) }}>
                         {o.priority}
@@ -124,14 +140,14 @@ export default function OrdersPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(o); setForm({ client_id: String((o as any).client_id || ''), quality_id: String((o as any).quality_id || ''), po_number: o.po_number || '', item_id: String((o as any).item_id || ''), shade_id: String((o as any).shade_id || ''), qty_kg: String(o.qty_kg || ''), rate: String(o.rate || ''), delivery_date: o.delivery_date || '', priority: o.priority }); setModal(true); }}>Edit</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(o); setForm({ client_id: String((o as any).client_id || ''), quality_id: String((o as any).quality_id || ''), department: (o as any).department || 'general', po_number: o.po_number || '', item_id: String((o as any).item_id || ''), shade_id: String((o as any).shade_id || ''), qty_kg: String(o.qty_kg || ''), rate: String(o.rate || ''), delivery_date: o.delivery_date || '', priority: o.priority }); setModal(true); }}>Edit</button>
                         <button className="btn btn-danger btn-sm" onClick={() => setDelId(o.id)}>Delete</button>
                       </div>
                     </td>
                   </tr>
                 ))}
                 {orders.length === 0 && (
-                  <tr><td colSpan={10}><div className="empty-state"><Icon name="clipboard-list" size={40} color="var(--primary-light)" /><p className="empty-state-title">No orders yet</p></div></td></tr>
+                  <tr><td colSpan={12}><div className="empty-state"><Icon name="clipboard-list" size={40} color="var(--primary-light)" /><p className="empty-state-title">No orders yet</p></div></td></tr>
                 )}
               </tbody>
             </table>
@@ -154,6 +170,12 @@ export default function OrdersPage() {
           </div>
           <div className="form-row">
             <div className="form-group"><label className="form-label">PO Number</label><input className="form-input" value={form.po_number} onChange={f('po_number')} placeholder="e.g. PO-2026-001" /></div>
+            <div className="form-group">
+              <label className="form-label">Industry / Unit</label>
+              <select className="form-select" value={form.department} onChange={f('department')}>
+                {DEPARTMENTS.map(d => <option key={d.v} value={d.v}>{d.label}</option>)}
+              </select>
+            </div>
           </div>
           <div className="form-row">
             <div className="form-group">

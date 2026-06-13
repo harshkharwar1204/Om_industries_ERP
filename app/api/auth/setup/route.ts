@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabase } from '@/lib/supabase';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,7 +35,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Was public — leaked every user's name/phone/role. Admin-only now.
+  try {
+    requireStrictAdmin(req);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 403 });
+  }
   const { data, error } = await supabase
     .from('erp_users').select('id, name, phone, role').order('created_at');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

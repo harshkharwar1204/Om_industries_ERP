@@ -1,11 +1,11 @@
 // app/api/loans/[id]/hapta/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const { amount, date, remarks } = await req.json();
     const loanId = Number(params.id);
     if (!amount || Number(amount) <= 0) return NextResponse.json({ error: 'Valid amount required' }, { status: 400 });

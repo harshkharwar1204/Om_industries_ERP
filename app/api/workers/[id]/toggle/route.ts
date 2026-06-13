@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const { data: current, error: fetchErr } = await supabase
       .from('erp_users').select('is_active').eq('id', params.id).single();
     if (fetchErr || !current) return NextResponse.json({ error: 'Worker not found' }, { status: 404 });

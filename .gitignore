@@ -40,3 +40,5 @@ out/
 # Build artifacts / prototype
 tsconfig.tsbuildinfo
 auth-control-center (1)/
+
+.next-worker/

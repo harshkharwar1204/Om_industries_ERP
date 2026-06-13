@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { supabase } from '@/lib/supabase';
+import { JWT_SECRET, requireStrictAdmin } from '@/lib/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'om-industries-erp-secret-2024';
-const WORKER_ROLES = ['hanks_worker', 'coning_worker', 'dyeing_master'];
+const WORKER_ROLES = ['hanks_worker', 'coning_worker', 'dyeing_master', 'dyeing_worker'];
 
 export async function POST(req: NextRequest) {
   try {
+    // Account creation is admin-only. Previously public -> anyone could self-register
+    // as dyeing_master (which passes requireAdmin) and gain operational-admin access.
+    requireStrictAdmin(req);
     const { name, phone, pin, role, department } = await req.json();
 
     if (!name?.trim())  return NextResponse.json({ error: 'Name required' },       { status: 400 });
@@ -44,6 +47,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ token, user }, { status: 201 });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 400 });
+    return NextResponse.json({ error: e.message }, { status: /required|denied|token|unauthor/i.test(e.message) ? 403 : 400 });
   }
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin, requireAuth } from '@/lib/auth';
+import { requireStrictAdmin, requireAuth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 // Bulk upsert attendance for a date
 export async function POST(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const { date, records } = await req.json();
     // records: [{ worker_id, status }]
     if (!date || !Array.isArray(records)) {

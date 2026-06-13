@@ -5,6 +5,7 @@ import { PageHeader, Modal, useToast, Icon } from '@/components/ui';
 
 interface StockItem {
   id: number; cones: number | null; weight_kg: number; grade: string; location: string | null; status: string;
+  clients?: { name: string };
   stock_inward?: { challan_no: string | null; clients?: { name: string } };
   shade_id?: number | null;
   created_at: string;
@@ -57,7 +58,7 @@ export default function ReadyStockPage() {
 
   const filtered = stock.filter(s =>
     !search ||
-    (s.stock_inward?.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    ((s.clients?.name || s.stock_inward?.clients?.name) || '').toLowerCase().includes(search.toLowerCase()) ||
     (shades.find(sh => sh.id === s.shade_id)?.name || '').toLowerCase().includes(search.toLowerCase()) ||
     (s.location || '').toLowerCase().includes(search.toLowerCase())
   );
@@ -121,7 +122,7 @@ export default function ReadyStockPage() {
                 {filtered.map((s, i) => (
                   <tr key={s.id} style={s.status === 'dispatched' ? { opacity: 0.5 } : {}}>
                     <td className="text-secondary text-sm">{i + 1}</td>
-                    <td><strong>{s.stock_inward?.clients?.name || '—'}</strong></td>
+                    <td><strong>{s.clients?.name || s.stock_inward?.clients?.name || '—'}</strong></td>
                     <td>{(() => { const sh = shades.find(sh => sh.id === s.shade_id); return sh ? <>{sh.name}{sh.code ? <span className="text-secondary text-sm"> ({sh.code})</span> : ''}</> : '—'; })()}</td>
                     <td style={{ textAlign: 'right', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>{s.cones ?? '—'}</td>
                     <td style={{ textAlign: 'right', fontFamily: 'var(--font-heading)', fontWeight: 700 }}>{s.weight_kg} kg</td>

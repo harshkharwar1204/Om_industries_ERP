@@ -38,6 +38,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Client, qty and rate required' }, { status: 400 });
     }
 
+    // Validate dispatch quantity against available ready stock BEFORE creating the
+    // invoice — otherwise a 20kg dispatch wiped the whole lot with no remaining_kg check.
+    let stockRow: { id: number; remaining_kg: number } | null = null;
+    if (stock_id) {
+      const { data: rs } = await supabase
+        .from('ready_stock').select('id, remaining_kg, status').eq('id', stock_id).maybeSingle();
+      if (!rs) return NextResponse.json({ error: 'Ready stock lot not found' }, { status: 404 });
+      if (rs.status === 'dispatched') return NextResponse.json({ error: 'Lot already fully dispatched' }, { status: 409 });
+      if (Number(qty_kg) > Number(rs.remaining_kg) + 0.001) {
+        return NextResponse.json({ error: `Only ${rs.remaining_kg} kg available in this lot` }, { status: 400 });
+      }
+      stockRow = { id: rs.id, remaining_kg: Number(rs.remaining_kg) };
+    }
+
     // Get client state for GST calc
     const { data: client } = await supabase.from('clients').select('state_code, dealer_type').eq('id', client_id).single();
 
@@ -99,9 +113,12 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
 
-    // Mark stock as dispatched
-    if (stock_id) {
-      await supabase.from('ready_stock').update({ status: 'dispatched' }).eq('id', stock_id);
+    // Decrement the lot; only flag fully dispatched when nothing remains (partial dispatch supported).
+    if (stockRow) {
+      const left = Math.max(0, stockRow.remaining_kg - qtyNum);
+      await supabase.from('ready_stock')
+        .update({ remaining_kg: left, status: left <= 0.001 ? 'dispatched' : 'available' })
+        .eq('id', stockRow.id);
     }
 
     // Create client finance debit entry (grand_total = what client owes)

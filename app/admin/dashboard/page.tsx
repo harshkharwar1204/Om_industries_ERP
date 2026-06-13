@@ -62,7 +62,7 @@ export default function DashboardPage() {
       const [hanks, coning, orders, ready, financeSummary, loans, attendance, dispatches, workers] = await Promise.all([
         apiFetch('/production/hanks?status=pending').catch(() => []),
         apiFetch('/production/coning?status=pending').catch(() => []),
-        apiFetch('/orders?status=pending').catch(() => []),
+        apiFetch('/orders').catch(() => []),
         apiFetch('/stock/ready?status=available').catch(() => []),
         apiFetch('/finance/clients').catch(() => []),
         apiFetch('/loans').catch(() => []),
@@ -71,6 +71,7 @@ export default function DashboardPage() {
         apiFetch('/workers').catch(() => []),
       ]);
 
+      const ordersArr   = Array.isArray(orders) ? orders : [];
       const readyArr    = Array.isArray(ready) ? ready : [];
       const finArr      = Array.isArray(financeSummary) ? financeSummary : [];
       const loansArr    = Array.isArray(loans) ? loans : [];
@@ -83,7 +84,7 @@ export default function DashboardPage() {
       setStats({
         pendingHanks:         Array.isArray(hanks) ? hanks.length : 0,
         pendingConing:        Array.isArray(coning) ? coning.length : 0,
-        pendingOrders:        Array.isArray(orders) ? orders.length : 0,
+        pendingOrders:        ordersArr.filter((o: any) => o.status === 'pending').length,
         readyStockKg:         readyArr.reduce((s: number, r: any) => s + Number(r.weight_kg ?? 0), 0),
         readyStockCount:      readyArr.length,
         outstandingBalance:   finArr.reduce((s: number, r: any) => s + Number(r.balance ?? 0), 0),

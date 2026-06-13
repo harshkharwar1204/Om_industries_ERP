@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const client_id = req.nextUrl.searchParams.get('client_id');
 
     if (client_id) {
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const { client_id, date, amount, particulars, type } = await req.json();
     if (!client_id || !amount || !type) return NextResponse.json({ error: 'client_id, amount, type required' }, { status: 400 });
     if (!['credit', 'adjustment'].includes(type)) return NextResponse.json({ error: 'type must be credit or adjustment' }, { status: 400 });

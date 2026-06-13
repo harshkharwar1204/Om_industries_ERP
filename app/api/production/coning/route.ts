@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     if (status) query = query.eq('status', status);
     if (month && year) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`;
-      const end   = `${year}-${String(month).padStart(2, '0')}-31`;
+      const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
       query = query.gte('date', start).lte('date', end);
     }
 
@@ -32,13 +32,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = requireAuth(req);
-    let { client_id, quality_id, shade_id, dyed_stock_id, cone_weight_kg, cones_count, quality_check, date } = await req.json();
+    let { client_id, quality_id, shade_id, dyed_stock_id, order_id, cone_weight_kg, cones_count, quality_check, date } = await req.json();
 
-    // If a dyed batch is picked, auto-fill client/quality/shade from it.
+    // If a dyed batch is picked, auto-fill client/quality/shade/order from it.
     if (dyed_stock_id) {
       const { data: ds } = await supabase
-        .from('dyed_stock').select('client_id, quality_id, shade_id').eq('id', dyed_stock_id).maybeSingle();
-      if (ds) { client_id = client_id || ds.client_id; quality_id = quality_id || ds.quality_id; shade_id = shade_id ?? ds.shade_id; }
+        .from('dyed_stock').select('client_id, quality_id, shade_id, order_id').eq('id', dyed_stock_id).maybeSingle();
+      if (ds) { client_id = client_id || ds.client_id; quality_id = quality_id || ds.quality_id; shade_id = shade_id ?? ds.shade_id; order_id = order_id ?? ds.order_id; }
     }
 
     if (!client_id || !quality_id || !cone_weight_kg || !cones_count) {
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
         quality_id:     Number(quality_id),
         shade_id:       shade_id ? Number(shade_id) : null,
         dyed_stock_id:  dyed_stock_id ? Number(dyed_stock_id) : null,
+        order_id:       order_id ? Number(order_id) : null,
         cone_weight_kg: Number(cone_weight_kg),
         cones_count:    Number(cones_count),
         output_kg,

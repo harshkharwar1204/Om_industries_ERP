@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const dept = req.nextUrl.searchParams.get('department');
     let query = supabase
       .from('erp_users')
-      .select('id, name, phone, email, role, department, is_active, daily_rate, created_at')
+      .select('id, name, phone, email, role, department, is_active, daily_rate, monthly_salary, created_at')
       .neq('role', 'admin')
       .order('name');
     if (dept) query = query.eq('department', dept);
@@ -23,9 +23,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const body = await req.json();
-    const { name, phone, email, pin, role, department } = body;
+    const { name, phone, email, pin, role, department, daily_rate, monthly_salary } = body;
 
     if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
     if (!phone && !email) return NextResponse.json({ error: 'Phone or Gmail required' }, { status: 400 });
@@ -42,9 +42,11 @@ export async function POST(req: NextRequest) {
         pin_hash,
         role: role || 'hanks_worker',
         department: department || null,
+        daily_rate: Number(daily_rate) || 0,
+        monthly_salary: Number(monthly_salary) || 0,
         is_active: true,
       }])
-      .select('id, name, phone, email, role, department, is_active')
+      .select('id, name, phone, email, role, department, is_active, daily_rate, monthly_salary')
       .single();
 
     if (error) throw error;

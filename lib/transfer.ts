@@ -38,6 +38,24 @@ export async function consumePool(
  * Recompute fulfillment columns for matching open orders.
  * Adds `kg` to the given stage column on the oldest matching pending/processing order.
  */
+/** Add `kg` to a specific order's stage counter; auto-advance status. Used when production is order-linked. */
+export async function bumpOrder(
+  orderId: number,
+  stage: 'received_kg' | 'dyed_kg' | 'coned_kg',
+  kg: number
+): Promise<void> {
+  if (!orderId || !kg) return;
+  const { data: o } = await supabase
+    .from('orders').select('id, qty_kg, received_kg, dyed_kg, coned_kg, status').eq('id', orderId).single();
+  if (!o) return;
+  const newVal = Number((o as any)[stage] ?? 0) + Number(kg);
+  const cap = Number(o.qty_kg ?? 0);
+  const update: any = { [stage]: newVal };
+  if (o.status === 'pending') update.status = 'processing';
+  if (stage === 'coned_kg' && cap > 0 && newVal >= cap) update.status = 'completed';
+  await supabase.from('orders').update(update).eq('id', orderId);
+}
+
 export async function addOrderProgress(
   stage: 'received_kg' | 'dyed_kg' | 'coned_kg',
   match: { client_id?: number | null; quality_id?: number | null; shade_id?: number | null },

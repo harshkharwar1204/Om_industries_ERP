@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     if (workerId) query = query.eq('worker_id', workerId);
     if (month && year) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`;
-      const end   = `${year}-${String(month).padStart(2, '0')}-31`;
+      const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
       query = query.gte('date', start).lte('date', end);
     }
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = requireAuth(req);
     const body = await req.json();
-    const { client_id, quality_id, weight_kg, date } = body;
+    const { client_id, quality_id, weight_kg, date, order_id } = body;
     if (!client_id || !quality_id || !weight_kg) {
       return NextResponse.json({ error: 'Client, quality and weight required' }, { status: 400 });
     }
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
         worker_id: user.id,
         client_id: Number(client_id),
         quality_id: Number(quality_id),
+        order_id: order_id ? Number(order_id) : null,
         weight_kg: Number(weight_kg),
         date: date || new Date().toISOString().split('T')[0],
         status: 'pending',

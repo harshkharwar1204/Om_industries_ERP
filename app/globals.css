@@ -997,6 +997,112 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
   .main-content { padding: 0; overflow: visible; }
 }
 
+/* ============================================================
+   POLISH LAYER — industrial-refined micro-interactions
+   Additive only. Honors the <300ms rule + reduced-motion guard.
+   ============================================================ */
+
+/* -- Cards: lift + accent-tinted depth on hover -- */
+.card {
+  position: relative;
+  transition: box-shadow var(--transition-base), transform var(--transition-base), border-color var(--transition-base);
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15,23,42,0.10), 0 4px 10px rgba(15,23,42,0.05);
+  border-color: var(--border-dark);
+}
+/* hairline accent that wipes in along the card top on hover */
+.card::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0;
+  height: 2px; width: 100%;
+  background: linear-gradient(90deg, var(--accent), #FBBF24);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--transition-slow) cubic-bezier(0.4,0,0.2,1);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.card:hover::after { transform: scaleX(1); }
+/* stat cards keep their own lift; suppress the double-translate */
+.stat-card:hover { transform: translateY(-3px); }
+
+/* -- Stat cards: glow ring + tabular number feel -- */
+.stat-icon { position: relative; overflow: hidden; }
+.stat-icon::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.45), transparent 60%);
+  opacity: 0; transition: opacity var(--transition-base);
+}
+.stat-card:hover .stat-icon::before { opacity: 1; }
+.stat-value { font-variant-numeric: tabular-nums; }
+
+/* -- Buttons: sheen sweep on primary + crisper press -- */
+.btn { position: relative; overflow: hidden; }
+.btn-primary::before {
+  content: '';
+  position: absolute; top: 0; left: -130%;
+  width: 80%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.28), transparent);
+  transform: skewX(-18deg);
+  transition: left var(--transition-slow) ease;
+  pointer-events: none;
+}
+.btn-primary:hover:not(:disabled)::before { left: 140%; }
+.btn:active:not(:disabled) { transform: scale(0.96); }
+
+/* -- Table rows: staggered reveal (first screenful only) -- */
+@keyframes rowIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.data-table tbody tr { animation: rowIn var(--transition-base) ease both; }
+.data-table tbody tr:nth-child(1)  { animation-delay: 0ms; }
+.data-table tbody tr:nth-child(2)  { animation-delay: 25ms; }
+.data-table tbody tr:nth-child(3)  { animation-delay: 50ms; }
+.data-table tbody tr:nth-child(4)  { animation-delay: 75ms; }
+.data-table tbody tr:nth-child(5)  { animation-delay: 100ms; }
+.data-table tbody tr:nth-child(6)  { animation-delay: 125ms; }
+.data-table tbody tr:nth-child(7)  { animation-delay: 150ms; }
+.data-table tbody tr:nth-child(8)  { animation-delay: 175ms; }
+.data-table tbody tr:nth-child(n+9){ animation-delay: 200ms; }
+.data-table tbody tr:hover { background: var(--hover-bg); box-shadow: inset 3px 0 0 var(--accent); }
+
+/* -- Approval cards: slide + accent rail on hover -- */
+.approval-card { animation: rowIn var(--transition-base) ease both; }
+.approval-card:hover { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* -- Badges: gentle press feedback when interactive -- */
+.badge { transition: transform var(--transition-fast); }
+
+/* -- Page header: accent tick before the title -- */
+.page-header h1 { position: relative; padding-left: 14px; }
+.page-header h1::before {
+  content: '';
+  position: absolute; left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 4px; height: 0.8em;
+  background: linear-gradient(180deg, var(--accent), var(--accent-hover));
+  border-radius: 2px;
+}
+
+/* -- Inputs: subtle lift on focus -- */
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  transform: translateY(-1px);
+}
+
+/* -- Nav item: active accent bar -- */
+.nav-item.active { position: relative; }
+.nav-item.active::before {
+  content: '';
+  position: absolute; left: -10px; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 60%;
+  background: #fff;
+  border-radius: 0 2px 2px 0;
+  opacity: 0.9;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

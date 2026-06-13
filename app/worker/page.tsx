@@ -5,8 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast, Icon, SearchableDropdown } from '@/components/ui';
 
 /* ── Hanks entry form ── */
-function HanksForm({ clients, qualities }: { clients: any[]; qualities: any[] }) {
-  const [form, setForm]         = useState({ client_id: '', quality_id: '', weight_kg: '0' });
+function HanksForm({ clients, qualities, orders }: { clients: any[]; qualities: any[]; orders: any[] }) {
+  const [form, setForm]         = useState({ client_id: '', quality_id: '', order_id: '', weight_kg: '0' });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess]   = useState('');
   const toast = useToast();
@@ -29,7 +29,7 @@ function HanksForm({ clients, qualities }: { clients: any[]; qualities: any[] })
       const clientName = clients.find(c => String(c.id) === form.client_id)?.name ?? '';
       setSuccess(`${kg} kg submitted for ${clientName} ✓`);
       toast(`${kg} kg submitted for approval`);
-      setForm({ client_id: '', quality_id: '', weight_kg: '0' });
+      setForm({ client_id: '', quality_id: '', order_id: '', weight_kg: '0' });
       setTimeout(() => setSuccess(''), 4000);
     } catch (e: any) { toast(e.message, 'error'); }
     finally { setSubmitting(false); }
@@ -48,6 +48,17 @@ function HanksForm({ clients, qualities }: { clients: any[]; qualities: any[] })
             <Icon name="factory" size={18} color="var(--accent)" />Submit Today's Production
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="form-group">
+              <label className="form-label">Order</label>
+              <select className="form-select" value={form.order_id} style={{ fontSize: 16 }}
+                onChange={e => {
+                  const o = orders.find(x => String(x.id) === e.target.value);
+                  setForm(p => ({ ...p, order_id: e.target.value, client_id: o ? String(o.client_id ?? '') : p.client_id, quality_id: o ? String(o.quality_id ?? '') : p.quality_id }));
+                }}>
+                <option value="">Select order…</option>
+                {orders.map(o => <option key={o.id} value={o.id}>{o.clients?.name ?? '—'} · {o.qualities?.name ?? ''} · {o.qty_kg}kg{o.po_number ? ` · ${o.po_number}` : ''}</option>)}
+              </select>
+            </div>
             <div className="form-group">
               <label className="form-label">Client</label>
               <SearchableDropdown options={clients.map(c => ({ label: c.name, value: c.id }))} value={form.client_id} onChange={v => setForm(p => ({ ...p, client_id: String(v) }))} placeholder="Search party…" />
@@ -86,7 +97,7 @@ function HanksForm({ clients, qualities }: { clients: any[]; qualities: any[] })
 
 /* ── Coning entry form ── */
 function ConingForm({ clients, qualities, batches }: { clients: any[]; qualities: any[]; batches: any[] }) {
-  const [form, setForm]         = useState({ client_id: '', quality_id: '', shade_id: '', dyed_stock_id: '', cone_weight_kg: '1.0', cones_count: '0', quality_check: 'pass' });
+  const [form, setForm]         = useState({ client_id: '', quality_id: '', shade_id: '', dyed_stock_id: '', cone_weight_kg: '1.0', cones_count: '0' });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess]   = useState('');
   const toast = useToast();
@@ -118,7 +129,7 @@ function ConingForm({ clients, qualities, batches }: { clients: any[]; qualities
       const clientName = clients.find(c => String(c.id) === form.client_id)?.name ?? '';
       setSuccess(`${form.cones_count} cones (${outputKg} kg) submitted for ${clientName} ✓`);
       toast(`${form.cones_count} cones submitted for approval`);
-      setForm({ client_id: '', quality_id: '', shade_id: '', dyed_stock_id: '', cone_weight_kg: '1.0', cones_count: '0', quality_check: 'pass' });
+      setForm({ client_id: '', quality_id: '', shade_id: '', dyed_stock_id: '', cone_weight_kg: '1.0', cones_count: '0' });
       setTimeout(() => setSuccess(''), 4000);
     } catch (e: any) { toast(e.message, 'error'); }
     finally { setSubmitting(false); }
@@ -189,25 +200,6 @@ function ConingForm({ clients, qualities, batches }: { clients: any[]; qualities
                 <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--success)', fontSize: 18 }}>₹{estimatedEarnings}</span>
               </div>
             )}
-            <div className="form-group">
-              <label className="form-label">Quality Check</label>
-              <div style={{ display: 'flex', gap: 12 }}>
-                {[{ v: 'pass', label: 'Pass', icon: 'check-circle', color: 'var(--success)', bg: 'var(--success-light)' },
-                  { v: 'reject', label: 'Reject', icon: 'x-circle', color: 'var(--danger)', bg: '#FEE2E2' }].map(opt => (
-                  <label key={opt.v} style={{
-                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    cursor: 'pointer', padding: '12px', borderRadius: 'var(--radius-sm)',
-                    border: `2px solid ${form.quality_check === opt.v ? opt.color : 'var(--border)'}`,
-                    background: form.quality_check === opt.v ? opt.bg : 'transparent',
-                    fontWeight: form.quality_check === opt.v ? 600 : 400, transition: 'all 0.15s',
-                  }}>
-                    <input type="radio" name="quality_check" value={opt.v} checked={form.quality_check === opt.v}
-                      onChange={() => setForm(p => ({ ...p, quality_check: opt.v }))} style={{ display: 'none' }} />
-                    <Icon name={opt.icon as any} size={18} color={opt.color} />{opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
             <button className="btn btn-primary" style={{ width: '100%', fontSize: 17, fontWeight: 600, padding: '16px', marginTop: 4, gap: 10 }}
               onClick={submit} disabled={submitting} type="button">
               {submitting ? <><div className="loading-spinner loading-spinner-sm" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} /> Submitting…</> : <><Icon name="check" size={18} /> Submit Coning</>}
@@ -224,6 +216,7 @@ export default function ProductionEntryPage() {
   const [clients, setClients]     = useState<any[]>([]);
   const [qualities, setQualities] = useState<any[]>([]);
   const [batches, setBatches]     = useState<any[]>([]);
+  const [orders, setOrders]       = useState<any[]>([]);
   const { user } = useAuth();
   const toast = useToast();
 
@@ -233,6 +226,9 @@ export default function ProductionEntryPage() {
       .catch(e => toast(e.message, 'error'));
     if (user?.role === 'coning_worker') {
       apiFetch('/production/dyed-stock').then(setBatches).catch(() => {});
+    }
+    if (user?.role === 'hanks_worker') {
+      apiFetch('/orders/assigned').then(setOrders).catch(() => {});
     }
   }, [user?.role]);
 
@@ -249,7 +245,7 @@ export default function ProductionEntryPage() {
 
       {user?.role === 'coning_worker'
         ? <ConingForm clients={clients} qualities={qualities} batches={batches} />
-        : <HanksForm clients={clients} qualities={qualities} />
+        : <HanksForm clients={clients} qualities={qualities} orders={orders} />
       }
     </div>
   );

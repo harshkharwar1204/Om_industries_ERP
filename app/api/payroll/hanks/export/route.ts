@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const month = req.nextUrl.searchParams.get('month');
     const year  = req.nextUrl.searchParams.get('year');
     if (!month || !year) return NextResponse.json({ error: 'month and year required' }, { status: 400 });

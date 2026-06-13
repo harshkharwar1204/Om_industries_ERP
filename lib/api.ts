@@ -13,16 +13,17 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     headers: { ...getHeaders(), ...(options.headers as Record<string, string> ?? {}) },
   });
 
-  if (res.status === 401) {
-    if (typeof window !== 'undefined') {
+  if (!res.ok) {
+    const err = res.status === 401
+      ? { error: 'Session expired' }
+      : await res.json().catch(() => ({ error: 'Request failed' }));
+    // Treat auth failures (incl. expired/invalid token returned as 400/500) as a session expiry.
+    const authMsg = /no token|invalid token|session expired|jwt expired/i.test(err.error || '');
+    if ((res.status === 401 || authMsg) && typeof window !== 'undefined') {
       localStorage.removeItem('erp_token');
       window.location.href = '/login';
+      throw new Error('Session expired');
     }
-    throw new Error('Session expired');
-  }
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
     throw new Error(err.error || 'Request failed');
   }
 

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin, requireRole } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireRole(req, ['admin', 'dyeing_master']);
     const { data, error } = await supabase
       .from('recipes')
       .select('*, shades(id, name, ingredients(id, color_name, quantity, unit, quantity_liters))')

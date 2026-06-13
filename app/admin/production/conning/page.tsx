@@ -6,7 +6,7 @@ import { PageHeader, StatusBadge, useToast, Icon } from '@/components/ui';
 interface Entry {
   id: number; worker_id: number; date: string;
   cone_weight_kg: number; cones_count: number; output_kg: number;
-  quality_check: string; status: string;
+  status: string;
   rate_per_kg: number | null; total_earned: number | null;
   erp_users?: { name: string }; clients?: { name: string }; qualities?: { name: string };
 }
@@ -115,7 +115,7 @@ export default function ConningPage() {
                 <tr>
                   <th>Date</th><th>Worker</th><th>Client</th><th>Quality</th>
                   <th>Cone Wt</th><th>Cones</th><th>Output (kg)</th>
-                  <th>Quality Check</th><th>Rate</th><th>Earned</th><th>Status</th><th>Actions</th>
+                  <th>Rate</th><th>Earned</th><th>Status</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -128,7 +128,6 @@ export default function ConningPage() {
                     <td style={{ fontFamily: 'var(--font-heading)' }}>{e.cone_weight_kg} kg</td>
                     <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 600 }}>{e.cones_count}</td>
                     <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 600 }}>{e.output_kg} kg</td>
-                    <td><StatusBadge status={e.quality_check} /></td>
                     <td>{e.rate_per_kg ? `₹${e.rate_per_kg}` : '—'}</td>
                     <td style={{ color: e.total_earned ? 'var(--success)' : undefined, fontWeight: e.total_earned ? 600 : 400 }}>
                       {e.total_earned ? `₹${e.total_earned}` : '—'}
@@ -145,7 +144,7 @@ export default function ConningPage() {
                   </tr>
                 ))}
                 {entries.length === 0 && (
-                  <tr><td colSpan={12}>
+                  <tr><td colSpan={11}>
                     <div className="empty-state" style={{ padding: '32px 24px' }}>
                       <Icon name="box" size={40} color="var(--primary-light)" />
                       <p className="empty-state-title" style={{ marginTop: 12 }}>No conning entries</p>

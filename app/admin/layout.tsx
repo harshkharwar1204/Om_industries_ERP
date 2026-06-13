@@ -44,7 +44,6 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'clients',   label: 'Clients',   icon: 'archive', href: '/admin/masters/clients' },
       { id: 'qualities', label: 'Qualities', icon: 'layers',  href: '/admin/masters/qualities' },
       { id: 'machines',  label: 'Machines',  icon: 'cpu',     href: '/admin/masters/machines' },
-      { id: 'shades',    label: 'Shades',    icon: 'palette', href: '/admin/masters/shades' },
       { id: 'items',     label: 'Items',     icon: 'tag',          href: '/admin/masters/items' },
       { id: 'rates',     label: 'Rate Master', icon: 'indian-rupee', href: '/admin/masters/rates' },
     ],
@@ -89,10 +88,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (!user || user.role !== 'admin') {
+  const isMaster = user?.role === 'dyeing_master';
+
+  if (!user || (user.role !== 'admin' && !isMaster)) {
     router.replace('/login');
     return null;
   }
+
+  // Dyeing master = operational admin: blocked from accounts/finance/payroll/attendance/settings.
+  const MASTER_BLOCKED_IDS = ['finance-clients', 'chemicals'];
+  const MASTER_BLOCKED_PATHS = ['/admin/finance/clients', '/admin/masters/chemicals'];
+  if (isMaster && MASTER_BLOCKED_PATHS.some(p => pathname?.startsWith(p))) {
+    router.replace('/admin/dashboard');
+    return null;
+  }
+  const visibleSections = isMaster
+    ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !MASTER_BLOCKED_IDS.includes(i.id)) })).filter(s => s.items.length > 0)
+    : NAV_SECTIONS;
 
   const activeItem = ALL_NAV.find(n => pathname?.startsWith(n.href));
   const activeId = activeItem?.id ?? 'dashboard';
@@ -137,7 +149,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_SECTIONS.map(section => (
+          {visibleSections.map(section => (
             <div key={section.label}>
               <div className="sidebar-section-label">{section.label}</div>
               {section.items.map(item => (
@@ -168,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <strong style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user.name}
               </strong>
-              <span style={{ fontSize: 11 }}>Administrator</span>
+              <span style={{ fontSize: 11 }}>{isMaster ? 'Dyeing Master' : 'Administrator'}</span>
             </div>
           </div>
           <button

@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui';
 
 const NAV = [
   { href: '/worker',            icon: 'home',            label: 'Entry' },
+  { href: '/worker/orders',     icon: 'box',             label: 'Orders' },
   { href: '/worker/history',    icon: 'clipboard-list',  label: 'History' },
   { href: '/worker/advances',   icon: 'indian-rupee',    label: 'Advance' },
   { href: '/worker/attendance', icon: 'calendar-check',  label: 'Attend' },
@@ -26,7 +27,7 @@ export default function WorkerLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  if (!user || !['hanks_worker', 'coning_worker', 'dyeing_master'].includes(user.role)) {
+  if (!user || !['hanks_worker', 'coning_worker'].includes(user.role)) {
     router.replace('/login');
     return null;
   }

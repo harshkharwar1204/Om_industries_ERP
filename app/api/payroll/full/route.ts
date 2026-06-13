@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const month = req.nextUrl.searchParams.get('month');
     const year  = req.nextUrl.searchParams.get('year');
     if (!month || !year) return NextResponse.json({ error: 'month and year required' }, { status: 400 });
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
 
     const [workers, hanks, coning, attendance, advances, loans, savedPayroll] = await Promise.all([
-      supabase.from('erp_users').select('id, name, department, role, daily_rate').neq('role', 'admin').order('name'),
+      supabase.from('erp_users').select('id, name, department, role, daily_rate, monthly_salary').neq('role', 'admin').order('name'),
       supabase.from('hanks_production').select('worker_id, weight_kg, total_earned').eq('status', 'approved').gte('date', start).lte('date', end),
       supabase.from('coning_production').select('worker_id, output_kg, qualities(coning_rate_per_kg)').eq('status', 'approved').gte('date', start).lte('date', end),
       supabase.from('attendance').select('worker_id, status').gte('date', start).lte('date', end),
@@ -60,7 +60,12 @@ export async function GET(req: NextRequest) {
       const dyeing_wage = saved ? Number(saved.dyeing_wage ?? 0) : 0;
       const bonus       = saved ? Number(saved.bonus       ?? 0) : 0;
 
-      const gross_wage  = hanks_wage + coning_wage + dyeing_wage + attendance_wage + bonus;
+      // Salaried roles (dyeing master): fixed monthly salary, no piece-rate/attendance wage.
+      const salaried     = w.role === 'dyeing_master';
+      const salary       = salaried ? Number((w as any).monthly_salary ?? 0) : 0;
+      const gross_wage   = salaried
+        ? salary + bonus
+        : hanks_wage + coning_wage + dyeing_wage + attendance_wage + bonus;
       const net_wage    = Math.max(0, gross_wage - advance_deduction - loan_deduction);
 
       return {
@@ -75,6 +80,7 @@ export async function GET(req: NextRequest) {
         coning_wage:Math.round(coning_wage * 100) / 100,
         dyeing_wage:Math.round(dyeing_wage * 100) / 100,
         present_days, daily_rate,
+        salaried, monthly_salary: salary,
         attendance_wage: Math.round(attendance_wage * 100) / 100,
         gross_wage: Math.round(gross_wage  * 100) / 100,
         advance_deduction: Math.round(advance_deduction * 100) / 100,
@@ -92,14 +98,14 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(rows);
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: e.message }, { status: /required|denied|token|unauthor/i.test(e.message) ? 403 : 500 });
   }
 }
 
 // Save/update payroll record for a worker-month
 export async function POST(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const { worker_id, month, year, dyeing_wage, bonus, notes } = await req.json();
     if (!worker_id || !month || !year) return NextResponse.json({ error: 'worker_id, month, year required' }, { status: 400 });
 
@@ -109,7 +115,7 @@ export async function POST(req: NextRequest) {
     const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
 
     const [worker, hanks, coning, att, adv, loans] = await Promise.all([
-      supabase.from('erp_users').select('daily_rate').eq('id', worker_id).single(),
+      supabase.from('erp_users').select('daily_rate, monthly_salary, role').eq('id', worker_id).single(),
       supabase.from('hanks_production').select('weight_kg, total_earned').eq('worker_id', worker_id).eq('status', 'approved').gte('date', start).lte('date', end),
       supabase.from('coning_production').select('output_kg, qualities(coning_rate_per_kg)').eq('worker_id', worker_id).eq('status', 'approved').gte('date', start).lte('date', end),
       supabase.from('attendance').select('status').eq('worker_id', worker_id).gte('date', start).lte('date', end),
@@ -128,7 +134,9 @@ export async function POST(req: NextRequest) {
     const loan_deduction    = (loans.data ?? []).reduce((s, l) => s + Number(l.hapta_amount), 0);
     const dyeingW = Number(dyeing_wage ?? 0);
     const bonusV  = Number(bonus ?? 0);
-    const gross_wage = hanks_wage + coning_wage + dyeingW + attendance_wage + bonusV;
+    const salaried = worker.data?.role === 'dyeing_master';
+    const salary   = salaried ? Number(worker.data?.monthly_salary ?? 0) : 0;
+    const gross_wage = salaried ? salary + bonusV : hanks_wage + coning_wage + dyeingW + attendance_wage + bonusV;
     const net_wage   = Math.max(0, gross_wage - advance_deduction - loan_deduction);
 
     const row = {
@@ -146,6 +154,6 @@ export async function POST(req: NextRequest) {
     if (error) throw error;
     return NextResponse.json(data, { status: 201 });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 400 });
+    return NextResponse.json({ error: e.message }, { status: /required|denied|token|unauthor/i.test(e.message) ? 403 : 400 });
   }
 }

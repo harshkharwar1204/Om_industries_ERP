@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       .order('date', { ascending: false });
     if (month && year) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`;
-      const end   = `${year}-${String(month).padStart(2, '0')}-31`;
+      const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
       query = query.gte('date', start).lte('date', end);
     }
     const { data, error } = await query;

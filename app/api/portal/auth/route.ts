@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'om-industries-erp-secret-2024';
+import { JWT_SECRET } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {

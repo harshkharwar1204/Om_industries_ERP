@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const { data, error } = await supabase
       .from('worker_advances')
       .update({ status: 'rejected' })

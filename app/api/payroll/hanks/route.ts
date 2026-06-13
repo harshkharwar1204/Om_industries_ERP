@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const month = req.nextUrl.searchParams.get('month');
     const year  = req.nextUrl.searchParams.get('year');
     if (!month || !year) return NextResponse.json({ error: 'month and year required' }, { status: 400 });
 
     const start = `${year}-${String(month).padStart(2, '0')}-01`;
-    const end   = `${year}-${String(month).padStart(2, '0')}-31`;
+    const end   = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
 
     // Approved production
     const { data: production, error: pErr } = await supabase

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/auth';
-import { addOrderProgress } from '@/lib/transfer';
+import { addOrderProgress, bumpOrder } from '@/lib/transfer';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -58,14 +58,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await supabase.from('grey_stock').insert([{
       client_id:       entry.client_id,
       quality_id:      entry.quality_id,
+      order_id:        entry.order_id ?? null,
       weight_kg:       producedKg,
       remaining_kg:    producedKg,
       source_hanks_id: entry.id,
       date:            entry.date,
     }]);
 
-    // Order fulfillment: count toward received weight.
-    await addOrderProgress('received_kg', { client_id: entry.client_id, quality_id: entry.quality_id }, producedKg);
+    // Order fulfillment: count toward received weight (direct if order-linked, else by match).
+    if (entry.order_id) await bumpOrder(entry.order_id, 'received_kg', producedKg);
+    else await addOrderProgress('received_kg', { client_id: entry.client_id, quality_id: entry.quality_id }, producedKg);
 
     return NextResponse.json(data);
   } catch (e: any) {

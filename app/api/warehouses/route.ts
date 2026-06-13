@@ -23,6 +23,6 @@ export async function GET(req: NextRequest) {
       chemicals: chemicals.data ?? [],
     });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: e.message.includes('required') ? 403 : 500 });
+    return NextResponse.json({ error: e.message }, { status: /required|denied|token|unauthor/i.test(e.message) ? 403 : 500 });
   }
 }

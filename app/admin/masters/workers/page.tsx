@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { PageHeader, Modal, ConfirmDialog, StatusBadge, useToast, Icon } from '@/components/ui';
 
-interface Worker { id: number; name: string; phone: string; role: string; department: string | null; is_active: boolean; daily_rate: number | null; }
-const BLANK = { name: '', phone: '', email: '', role: 'hanks_worker', department: 'hanks', pin: '', daily_rate: '' };
+interface Worker { id: number; name: string; phone: string; role: string; department: string | null; is_active: boolean; daily_rate: number | null; monthly_salary?: number | null; }
+const BLANK = { name: '', phone: '', email: '', role: 'hanks_worker', department: 'hanks', pin: '', daily_rate: '', monthly_salary: '' };
 
 export default function WorkersPage() {
   const [workers, setWorkers]   = useState<Worker[]>([]);
@@ -21,7 +21,7 @@ export default function WorkersPage() {
   const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(p => ({ ...p, [k]: e.target.value }));
 
   const openAdd  = () => { setEditing(null); setForm(BLANK); setModal(true); };
-  const openEdit = (w: Worker) => { setEditing(w); setForm({ name: w.name, phone: w.phone, email: (w as any).email || '', role: w.role, department: w.department || 'hanks', pin: '', daily_rate: w.daily_rate ? String(w.daily_rate) : '' }); setModal(true); };
+  const openEdit = (w: Worker) => { setEditing(w); setForm({ name: w.name, phone: w.phone, email: (w as any).email || '', role: w.role, department: w.department || 'hanks', pin: '', daily_rate: w.daily_rate ? String(w.daily_rate) : '', monthly_salary: (w as any).monthly_salary ? String((w as any).monthly_salary) : '' }); setModal(true); };
 
   const save = async () => {
     if (!form.name) { toast('Name required', 'error'); return; }
@@ -82,7 +82,9 @@ export default function WorkersPage() {
                     <td>{w.role.replace('_', ' ')}</td>
                     <td>{w.department || '—'}</td>
                     <td style={{ fontFamily: 'var(--font-heading)', fontSize: 13 }}>
-                      {w.daily_rate ? `₹${w.daily_rate}/day` : <span className="text-secondary">—</span>}
+                      {w.role === 'dyeing_master'
+                        ? ((w as any).monthly_salary ? `₹${(w as any).monthly_salary}/mo` : <span className="text-secondary">—</span>)
+                        : (w.daily_rate ? `₹${w.daily_rate}/day` : <span className="text-secondary">—</span>)}
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -130,6 +132,7 @@ export default function WorkersPage() {
             <select className="form-select" value={form.role} onChange={f('role')}>
               <option value="hanks_worker">Hanks Worker</option>
               <option value="coning_worker">Coning Worker</option>
+              <option value="dyeing_master">Dyeing Master</option>
               <option value="admin">Admin</option>
             </select>
           </div>
@@ -141,10 +144,17 @@ export default function WorkersPage() {
               <option value="dyeing">Dyeing</option>
             </select>
           </div>
-          <div className="form-group">
-            <label className="form-label">Daily Rate (₹/day) <span className="text-secondary text-sm">— for attendance-based payroll</span></label>
-            <input className="form-input" type="number" step="1" min="0" value={form.daily_rate} onChange={f('daily_rate')} placeholder="e.g. 350" inputMode="numeric" />
-          </div>
+          {form.role === 'dyeing_master' ? (
+            <div className="form-group">
+              <label className="form-label">Monthly Salary (₹) <span className="text-secondary text-sm">— fixed salaried</span></label>
+              <input className="form-input" type="number" step="1" min="0" value={form.monthly_salary} onChange={f('monthly_salary')} placeholder="e.g. 25000" inputMode="numeric" />
+            </div>
+          ) : (
+            <div className="form-group">
+              <label className="form-label">Daily Rate (₹/day) <span className="text-secondary text-sm">— for attendance-based payroll</span></label>
+              <input className="form-input" type="number" step="1" min="0" value={form.daily_rate} onChange={f('daily_rate')} placeholder="e.g. 350" inputMode="numeric" />
+            </div>
+          )}
           {!editing && (
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label className="form-label">4-Digit PIN {form.email ? '(optional — Gmail set)' : '*'}</label>

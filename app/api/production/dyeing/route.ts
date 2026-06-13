@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin, requireAuth } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { consumePool } from '@/lib/transfer';
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req);
+    requireRole(req, ['admin', 'dyeing_master']);
     const status = req.nextUrl.searchParams.get('status');
 
     let query = supabase
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = requireAuth(req);
-    const { client_id, quality_id, shade_id, recipe_id, machine_id, lot_id, input_kg, date } = await req.json();
+    const { client_id, quality_id, shade_id, recipe_id, machine_id, lot_id, input_kg, date, order_id } = await req.json();
 
     if (!input_kg) return NextResponse.json({ error: 'Batch weight (input kg) required' }, { status: 400 });
 
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
         recipe_id:   recipe_id ? Number(recipe_id) : null,
         machine_id:  machine_id ? Number(machine_id) : null,
         lot_id:      lot_id ? Number(lot_id) : null,
+        order_id:    order_id ? Number(order_id) : null,
         operator_id: user.id,
         input_kg:    Number(input_kg),
         batch_no,

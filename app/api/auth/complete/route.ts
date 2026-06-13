@@ -11,7 +11,10 @@ export async function POST(req: NextRequest) {
     const { credential, role, department, name } = await req.json();
     if (!credential || !role) return NextResponse.json({ error: 'credential and role required' }, { status: 400 });
 
-    const validRoles = ['admin', 'hanks_worker', 'coning_worker'];
+    // Self-service onboarding may NOT grant admin/master. Anyone with a Google
+    // account hits this; allowing 'admin' here = instant full takeover. The owner
+    // promotes accounts to admin/dyeing_master via the workers API afterwards.
+    const validRoles = ['hanks_worker', 'coning_worker', 'dyeing_worker'];
     if (!validRoles.includes(role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
 
     // Re-verify Google credential

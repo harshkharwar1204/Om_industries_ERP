@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabase } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/auth';
+import { requireStrictAdmin } from '@/lib/auth';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req);
+    requireStrictAdmin(req);
     const { pin } = await req.json();
     if (!pin) return NextResponse.json({ error: 'PIN required' }, { status: 400 });
     const pin_hash = await bcrypt.hash(String(pin), 10);
