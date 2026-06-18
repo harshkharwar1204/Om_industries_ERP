@@ -13,6 +13,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       .from('erp_users').update({ is_active: !current.is_active }).eq('id', params.id)
       .select('id, is_active').single();
     if (error) throw error;
+    // Revoke all active sessions when deactivating
+    if (!data.is_active) {
+      await supabase.from('sessions').delete().eq('user_id', params.id);
+    }
     await logAction(actor, data.is_active ? 'activate' : 'deactivate', 'erp_users', params.id, `${data.is_active ? 'Activated' : 'Deactivated'} worker ${params.id}`);
     return NextResponse.json(data);
   } catch (e: any) {

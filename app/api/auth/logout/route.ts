@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
-  const token = getToken(req);
-  if (token) await supabase.from('sessions').delete().eq('token', token);
-  return NextResponse.json({ message: 'Logged out' });
+  const auth = req.headers.get('authorization');
+  if (auth?.startsWith('Bearer ')) {
+    const token = auth.slice(7);
+    await supabase.from('sessions').delete().eq('token', token);
+  }
+  return NextResponse.json({ ok: true });
 }

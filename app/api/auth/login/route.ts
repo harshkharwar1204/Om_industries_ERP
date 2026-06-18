@@ -4,22 +4,36 @@ import jwt from 'jsonwebtoken';
 import { supabase } from '@/lib/supabase';
 import { JWT_SECRET } from '@/lib/auth';
 
-// Brute-force throttle: a 4-digit PIN is only 10k combos. Lock a phone after
-// MAX_FAILS failures within WINDOW_MS. In-memory (per server instance) — good
-// enough for a single-node deploy; swap for a table/Redis if scaled out.
 const MAX_FAILS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
-const attempts = new Map<string, { count: number; first: number }>();
-function throttleState(key: string) {
-  const now = Date.now();
-  const rec = attempts.get(key);
-  if (rec && now - rec.first > WINDOW_MS) { attempts.delete(key); return null; }
-  return rec ?? null;
+
+async function getThrottle(phone: string) {
+  const { data } = await supabase
+    .from('login_attempts')
+    .select('attempt_count, first_attempt_at, locked_until')
+    .eq('phone', phone)
+    .maybeSingle();
+  return data;
 }
-function recordFail(key: string) {
-  const now = Date.now();
-  const rec = throttleState(key);
-  if (rec) { rec.count += 1; } else { attempts.set(key, { count: 1, first: now }); }
+
+async function recordFail(phone: string) {
+  const rec = await getThrottle(phone);
+  if (!rec) {
+    await supabase.from('login_attempts').insert({ phone, attempt_count: 1 });
+    return;
+  }
+  const windowExpired = Date.now() - new Date(rec.first_attempt_at).getTime() > WINDOW_MS;
+  if (windowExpired) {
+    await supabase.from('login_attempts').update({ attempt_count: 1, first_attempt_at: new Date().toISOString(), locked_until: null }).eq('phone', phone);
+    return;
+  }
+  const count = rec.attempt_count + 1;
+  const lockedUntil = count >= MAX_FAILS ? new Date(Date.now() + WINDOW_MS).toISOString() : null;
+  await supabase.from('login_attempts').update({ attempt_count: count, locked_until: lockedUntil }).eq('phone', phone);
+}
+
+async function clearThrottle(phone: string) {
+  await supabase.from('login_attempts').delete().eq('phone', phone);
 }
 
 export async function POST(req: NextRequest) {
@@ -30,10 +44,16 @@ export async function POST(req: NextRequest) {
     }
 
     const key = String(phone).trim();
-    const rec = throttleState(key);
-    if (rec && rec.count >= MAX_FAILS) {
-      const mins = Math.ceil((WINDOW_MS - (Date.now() - rec.first)) / 60000);
+    const rec = await getThrottle(key);
+
+    if (rec?.locked_until && new Date(rec.locked_until) > new Date()) {
+      const mins = Math.ceil((new Date(rec.locked_until).getTime() - Date.now()) / 60000);
       return NextResponse.json({ error: `Too many attempts. Try again in ${mins} min.` }, { status: 429 });
+    }
+
+    // Reset if window expired
+    if (rec && Date.now() - new Date(rec.first_attempt_at).getTime() > WINDOW_MS) {
+      await clearThrottle(key);
     }
 
     const { data: user, error } = await supabase
@@ -43,7 +63,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !user) {
-      recordFail(key);
+      await recordFail(key);
       return NextResponse.json({ error: 'Invalid phone number or PIN' }, { status: 401 });
     }
     if (!user.is_active) {
@@ -52,10 +72,10 @@ export async function POST(req: NextRequest) {
 
     const valid = await bcrypt.compare(pin, user.pin_hash);
     if (!valid) {
-      recordFail(key);
+      await recordFail(key);
       return NextResponse.json({ error: 'Invalid phone number or PIN' }, { status: 401 });
     }
-    attempts.delete(key); // success clears the counter
+    await clearThrottle(key);
 
     const payload = {
       id: user.id, name: user.name, phone: user.phone,
