@@ -21,6 +21,7 @@ export default function OnboardingPage() {
   const [role, setRole]           = useState('');
   const [department, setDept]     = useState('');
   const [name, setName]           = useState('');
+  const [adminCode, setAdminCode] = useState('');
   const [loading, setLoading]     = useState(false);
   const router = useRouter();
   const toast  = useToast();
@@ -48,7 +49,7 @@ export default function OnboardingPage() {
       const res = await fetch('/api/auth/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential, role, department: department || null, name }),
+        body: JSON.stringify({ credential, role, department: department || null, name, adminCode: adminCode || undefined }),
       });
       const data = await res.json();
       if (!res.ok) { toast(data.error || 'Failed', 'error'); setLoading(false); return; }
@@ -118,6 +119,23 @@ export default function OnboardingPage() {
               ))}
             </div>
           </div>
+
+          {/* Admin setup code */}
+          {role === 'admin' && (
+            <div className="form-group" style={{ animation: 'slideUp 200ms ease' }}>
+              <label className="form-label">Admin Setup Code *</label>
+              <input
+                className="form-input"
+                type="password"
+                value={adminCode}
+                onChange={e => setAdminCode(e.target.value)}
+                placeholder="Enter admin setup code"
+              />
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                Contact the factory owner for this code.
+              </div>
+            </div>
+          )}
 
           {/* Department — only show for workers */}
           {role && role !== 'admin' && (

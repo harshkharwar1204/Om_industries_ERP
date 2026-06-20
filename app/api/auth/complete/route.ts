@@ -8,14 +8,17 @@ const CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 
 export async function POST(req: NextRequest) {
   try {
-    const { credential, role, department, name } = await req.json();
+    const { credential, role, department, name, adminCode } = await req.json();
     if (!credential || !role) return NextResponse.json({ error: 'credential and role required' }, { status: 400 });
 
-    // Self-service onboarding may NOT grant admin/master. Anyone with a Google
-    // account hits this; allowing 'admin' here = instant full takeover. The owner
-    // promotes accounts to admin/dyeing_master via the workers API afterwards.
-    const validRoles = ['hanks_worker', 'coning_worker', 'dyeing_worker'];
-    if (!validRoles.includes(role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    const workerRoles = ['hanks_worker', 'coning_worker', 'dyeing_worker'];
+    if (role === 'admin') {
+      const setupCode = process.env.ADMIN_SETUP_CODE;
+      if (!setupCode) return NextResponse.json({ error: 'Admin registration not configured. Contact factory owner.' }, { status: 403 });
+      if (!adminCode || adminCode !== setupCode) return NextResponse.json({ error: 'Invalid admin setup code' }, { status: 403 });
+    } else if (!workerRoles.includes(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
 
     // Re-verify Google credential
     const client = new OAuth2Client(CLIENT_ID);
